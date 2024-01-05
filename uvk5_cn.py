@@ -1089,7 +1089,7 @@ def convert_bytes_to_chinese(data: bytes) -> str:
     last_byte = 0x00
     text = ''
     for byte in data:
-        if byte == 0xFF or byte == 0x00:
+        if last_byte == 0x00 and byte == 0xFF or byte == 0x00:
             break
         if byte >= 0x80 and last_byte == 0x00:
             last_byte = byte
@@ -1099,7 +1099,6 @@ def convert_bytes_to_chinese(data: bytes) -> str:
             last_byte = 0x00
             continue
         text += chr(byte)
-        print(text)
     return text
 
 
