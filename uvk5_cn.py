@@ -30,10 +30,11 @@ import struct
 import logging
 
 from chirp import chirp_common, directory, bitwise, memmap, errors, util
+from chirp.errors import InvalidValueError
 from chirp.settings import RadioSetting, RadioSettingGroup, \
-    RadioSettingValueBoolean, RadioSettingValueList, \
-    RadioSettingValueInteger, RadioSettingValueString, \
-    RadioSettings
+      RadioSettingValueBoolean, RadioSettingValueList, \
+      RadioSettingValueInteger, RadioSettingValueString, \
+      RadioSettings, RadioSettingValue
 
 LOG = logging.getLogger(__name__)
 
@@ -1084,6 +1085,7 @@ for first_byte, inner_dict in FONT_MAPPING.items():
 CHINESE_CHARSET = "".join(REVERSE_FONT_MAPPING.keys())
 VALID_CHARACTERS = chirp_common.CHARSET_ASCII + CHINESE_CHARSET
 
+
 def convert_bytes_to_chinese(data: bytes) -> str:
     """Convert bytes to a string of chinese characters"""
     last_byte = 0x00
@@ -1112,6 +1114,28 @@ def convert_chinese_to_ascii_chars(data: str) -> str:
             text += chr(reverse_str[0])
             text += chr(reverse_str[1])
     return text
+
+
+class RadioSettingChineseValueString(RadioSettingValueString):
+
+    """A string setting"""
+
+    def __init__(self, minlength, maxlength, current,
+                 autopad=True, charset=chirp_common.CHARSET_ASCII):
+        RadioSettingValueString.__init__(self, minlength, maxlength, current, autopad, charset)
+
+    def set_value(self, value):
+        if len(value) < self._minlength or len(convert_chinese_to_ascii_chars(value)) > self._maxlength:
+            raise InvalidValueError("Value must be between %i and %i chars" %
+                                    (self._minlength, self._maxlength))
+        if self._autopad:
+            value = value.ljust(self._maxlength)
+        for char in value:
+            if char not in self._charset:
+                raise InvalidValueError("Value contains invalid " +
+                                        "character `%s'" % char)
+        RadioSettingValue.set_value(self, value)
+
 
 # the communication is obfuscated using this fine mechanism
 def xorarr(data: bytes):
@@ -1245,6 +1269,52 @@ def _readmem(serport, offset, length):
     return o[8:]
 
 
+def _read_add_mem(serport, offset, length, add: list):
+    LOG.debug(
+        "Sending read_add_mem offset=0x%4.4x len=0x%4.4x add=[0x%4.4x, 0x%4.4x]" % (offset, length, add[0], add[1]))
+
+    readmem = b"\x2b\x05\x08\x00" + \
+              struct.pack("<HBB", offset, length, 0) + \
+              b"\x6a\x39\x57\x64" + \
+              struct.pack("<BB", add[0], add[1])
+    _send_command(serport, readmem)
+    o = _receive_reply(serport)
+    if DEBUG_SHOW_MEMORY_ACTIONS:
+        LOG.debug("read_add_mem Received data len=0x%4.4x:\n%s" %
+                  (len(o), util.hexprint(o)))
+    return o[8:]
+
+
+def _write_add_mem(serport, offset, add, data):
+    length = len(data) + 2
+    LOG.debug("Sending write_add_mem offset=0x%4.4x len=0x%4.4x add=[0x%4.4x, 0x%4.4x]" %
+              (offset, length, add[0], add[1]))
+
+    if DEBUG_SHOW_MEMORY_ACTIONS:
+        LOG.debug("write_add_mem sent data offset=0x%4.4x len=0x%4.4x add=[0x%4.4x, 0x%4.4x]:\n%s" %
+                  (offset, length, add[0], add[1], util.hexprint(data)))
+
+    writemem = b"\x38\x05\x1c\x00" + \
+        struct.pack("<HBB", offset, length, 0) + \
+        b"\x6a\x39\x57\x64" + \
+        struct.pack("<BB", add[0], add[1]) + data
+
+    _send_command(serport, writemem)
+    o = _receive_reply(serport)
+
+    LOG.debug("write_add_mem Received data: %s len=%i" % (util.hexprint(o), len(o)))
+
+    if (o[0] == 0x1e
+            and
+            o[4] == (offset & 0xff)
+            and
+            o[5] == (offset >> 8) & 0xff):
+        return True
+    else:
+        LOG.warning("Bad data from write_add_mem")
+        raise errors.RadioError("Bad response to write_add_mem")
+
+
 def _writemem(serport, data, offset):
     LOG.debug("Sending writemem offset=0x%4.4x len=0x%4.4x" %
               (offset, len(data)))
@@ -1310,6 +1380,38 @@ def do_download(radio):
     return memmap.MemoryMapBytes(eeprom)
 
 
+def do_add_download(radio):
+    serport = radio.pipe
+    serport.timeout = 0.5
+    status = chirp_common.Status()
+    status.cur = 0
+    status.max = 3
+    status.msg = "Downloading added data from radio"
+    radio.status_fn(status)
+
+    f = _sayhello(serport)
+    if f:
+        radio.FIRMWARE_VERSION = f
+    else:
+        raise errors.RadioError('Unable to determine firmware version')
+
+    welcome_len = _read_add_mem(serport, 0x01, 0x02, [0x1E, 0xE3])
+    status.cur = 1
+    radio.status_fn(status)
+    welcome_len1, welcome_len2 = welcome_len
+    if welcome_len1 > 18:
+        welcome_len1 = 18
+    if welcome_len2 > 18:
+        welcome_len2 = 18
+    welcome_text_1 = _read_add_mem(serport, 0x01, welcome_len1, [0x20, 0xE3])
+    status.cur = 2
+    radio.status_fn(status)
+    welcome_text_2 = _read_add_mem(serport, 0x01, welcome_len2, [0x33, 0xE3])
+    status.cur = 3
+    radio.status_fn(status)
+    return [welcome_text_1, welcome_text_2]
+
+
 def do_upload(radio):
     serport = radio.pipe
     serport.timeout = 0.5
@@ -1337,7 +1439,38 @@ def do_upload(radio):
             raise errors.RadioError("Memory upload incomplete")
     status.msg = "Uploaded OK"
 
-    _resetradio(serport)
+    return True
+
+
+def do_add_upload(radio):
+    serport = radio.pipe
+    serport.timeout = 0.5
+    status = chirp_common.Status()
+    status.cur = 0
+    status.max = 3
+    status.msg = "Uploading add data to radio"
+    radio.status_fn(status)
+
+    f = _sayhello(serport)
+    if f:
+        radio.FIRMWARE_VERSION = f
+    else:
+        return False
+
+    addr = 0
+    welcome_logo = radio.get_welcome_logo()
+    _write_add_mem(serport, 0x01, [0x1E, 0xE3], bytes([len(x) for x in welcome_logo]))
+    status.cur = 1
+    radio.status_fn(status)
+    _write_add_mem(serport, 0x01, [0x20, 0xE3], b'\x00' * 18)
+    _write_add_mem(serport, 0x01, [0x20, 0xE3], welcome_logo[0])
+    status.cur = 1
+    radio.status_fn(status)
+    _write_add_mem(serport, 0x01, [0x33, 0xE3], b'\x00' * 18)
+    _write_add_mem(serport, 0x01, [0x33, 0xE3], welcome_logo[1])
+    status.cur = 1
+    radio.status_fn(status)
+    status.msg = "Uploaded OK"
 
     return True
 
@@ -1368,6 +1501,10 @@ class UVK5Radio(chirp_common.CloneModeRadio):
     NEEDS_COMPAT_SERIAL = False
     FIRMWARE_VERSION = ""
     _expanded_limits = False
+
+    def __init__(self, pipe):
+          super().__init__(pipe)
+          self._welcome_logo = [b'', b'']
 
     def get_prompts(x=None):
         rp = chirp_common.RadioPrompts()
@@ -1437,11 +1574,14 @@ class UVK5Radio(chirp_common.CloneModeRadio):
     # Do a download of the radio from the serial port
     def sync_in(self):
         self._mmap = do_download(self)
+        self._welcome_logo = do_add_download(self)
         self.process_mmap()
 
     # Do an upload of the radio to the serial port
     def sync_out(self):
         do_upload(self)
+        do_add_upload(self)
+        _resetradio(self.pipe)
 
     # Convert the raw byte array into a memory object structure
     def process_mmap(self):
@@ -1451,6 +1591,9 @@ class UVK5Radio(chirp_common.CloneModeRadio):
     # is very helpful for development
     def get_raw_memory(self, number):
         return repr(self._memobj.channel[number-1])
+
+    def get_welcome_logo(self):
+        return self._welcome_logo
 
     def validate_memory(self, mem):
         msgs = super().validate_memory(mem)
@@ -1846,13 +1989,13 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
             # Logo string 1
             if element.get_name() == "logo1":
-                b = str(element.value).rstrip("\x20\xff\x00")+"\x00"*12
-                _mem.logo_line1 = b[0:12]+"\x00\xff\xff\xff"
+                b = convert_chinese_to_ascii_chars(element.value).encode('latin-1')
+                self._welcome_logo[0] = b[0:18]
 
             # Logo string 2
             if element.get_name() == "logo2":
-                b = str(element.value).rstrip("\x20\xff\x00")+"\x00"*12
-                _mem.logo_line2 = b[0:12]+"\x00\xff\xff\xff"
+                b = convert_chinese_to_ascii_chars(element.value).encode('latin-1')
+                self._welcome_logo[1] = b[0:18]
 
             # unlock settings
 
@@ -2545,17 +2688,15 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         basic.append(rs)
 
         # Logo string 1
-        logo1 = str(_mem.logo_line1).strip("\x20\x00\xff") + "\x00"
-        logo1 = _getstring(logo1.encode('ascii', errors='ignore'), 0, 12)
-        rs = RadioSetting("logo1", _("Logo string 1 (12 characters)"),
-                          RadioSettingValueString(0, 12, logo1))
+        logo1 = convert_bytes_to_chinese(self._welcome_logo[0])
+        rs = RadioSetting("logo1", _("欢迎字符1 (18字符)"),
+                          RadioSettingChineseValueString(0, 18, logo1, False, VALID_CHARACTERS))
         basic.append(rs)
 
         # Logo string 2
-        logo2 = str(_mem.logo_line2).strip("\x20\x00\xff") + "\x00"
-        logo2 = _getstring(logo2.encode('ascii', errors='ignore'), 0, 12)
-        rs = RadioSetting("logo2", _("Logo string 2 (12 characters)"),
-                          RadioSettingValueString(0, 12, logo2))
+        logo2 = convert_bytes_to_chinese(self._welcome_logo[1])
+        rs = RadioSetting("logo2", _("欢迎字符2 (18字符)"),
+                          RadioSettingChineseValueString(0, 18, logo2, False, VALID_CHARACTERS))
         basic.append(rs)
 
         # FM radio
