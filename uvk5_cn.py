@@ -1286,7 +1286,7 @@ def _read_add_mem(serport, offset, length, add: list):
 
 
 def _write_add_mem(serport, offset, add, data):
-    length = len(data) + 2
+    length = len(data) + len(add)
     LOG.debug("Sending write_add_mem offset=0x%4.4x len=0x%4.4x add=[0x%4.4x, 0x%4.4x]" %
               (offset, length, add[0], add[1]))
 
