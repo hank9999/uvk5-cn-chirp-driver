@@ -215,7 +215,7 @@ u8 mdc_num;
 struct {
     u8 id[2];
     char name[14];
-} mdccontact1[12];
+} mdccontact1[11];
 
 #seekto 0x1ed0;
 struct {
@@ -236,12 +236,6 @@ struct {
 } high;
 u8 unused_00[7];
 } perbandpowersettings[7];
-
-#seekto 0x1f08;
-struct {
-    u8 id[2];
-    char name[14];
-} mdccontact2[3];
 
 #seekto 0x1f40;
 ul16 battery_level[6];
@@ -1462,7 +1456,7 @@ def do_add_upload(radio):
     serport.timeout = 0.5
     status = chirp_common.Status()
     status.cur = 0
-    status.max = 19
+    status.max = 15
     status.msg = "Uploading add data to radio"
     radio.status_fn(status)
 
@@ -1490,18 +1484,12 @@ def do_add_upload(radio):
     _write_add_mem(serport, 0x0, struct.pack("<H", 0x1D00), _memobj.mdc_num.get_raw())
     status.cur += 1
     radio.status_fn(status)
-    for i in range(1, 16):
-        if i <= 12:
-            mdc_id = _memobj.mdccontact1[i - 1].id
-            mdc_name = _memobj.mdccontact1[i - 1].name
-        else:
-            mdc_id = _memobj.mdccontact2[i - 13].id
-            mdc_name = _memobj.mdccontact2[i - 13].name
+    for i in range(1, 12):
+        mdc_id = _memobj.mdccontact1[i - 1].id
+        mdc_name = _memobj.mdccontact1[i - 1].name
         data = mdc_id.get_raw() + mdc_name.get_raw()
         _write_add_mem(serport, 0x0, struct.pack("<H", addr), data)
         addr += 0x10
-        if i == 12:
-            addr = 0x1F08
         status.cur += 1
         radio.status_fn(status)
     status.msg = "Uploaded OK"
@@ -2157,33 +2145,20 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             element_name = element.get_name()
             valid_mdc = 0
             last_valid = 0
-            for i in range(1, 16):
+            for i in range(1, 12):
                 mdc_id = "MDC_ID_" + str(i)
                 mdc_name = "MDC_NAME_" + str(i)
-                if i <= 12:
-                    if element_name == mdc_id:
-                        k = str(element.value).replace(' ', '').rjust(4, '0')
-                        _mem.mdccontact1[i - 1].id = bytes.fromhex(k)[0:2]
+                if element_name == mdc_id:
+                    k = str(element.value).replace(' ', '').rjust(4, '0')
+                    _mem.mdccontact1[i - 1].id = bytes.fromhex(k)[0:2]
 
-                    if element_name == mdc_name:
-                        _mem.mdccontact1[i - 1].name = str(element.value)[0:14]
+                if element_name == mdc_name:
+                    _mem.mdccontact1[i - 1].name = str(element.value)[0:14]
 
-                    is_not_empty = _mem.mdccontact1[i - 1].id.get_raw() != b'\x00' * 2 and _mem.mdccontact1[i - 1].name.get_raw() != b'\x20' * 20
-                    if is_not_empty and (last_valid == i - 1 or last_valid == 0):
-                        valid_mdc = i
-                        last_valid = i
-                else:
-                    if element_name == mdc_id:
-                        k = str(element.value).replace(' ', '').rjust(4, '0')
-                        _mem.mdccontact2[i - 13].id = bytes.fromhex(k)[0:2]
-
-                    if element_name == mdc_name:
-                        _mem.mdccontact2[i - 13].name = str(element.value)[0:14]
-
-                    is_not_empty = _mem.mdccontact2[i - 13].id.get_raw() == b'\x00' * 2 and _mem.mdccontact2[i - 13].name.get_raw() == b'\x20' * 20
-                    if is_not_empty and (last_valid == i - 1 or last_valid == 0):
-                        valid_mdc = i
-                        last_valid = i
+                is_not_empty = _mem.mdccontact1[i - 1].id.get_raw() != b'\x00' * 2 and _mem.mdccontact1[i - 1].name.get_raw() != b'\x20' * 20
+                if is_not_empty and (last_valid == i - 1 or last_valid == 0):
+                    valid_mdc = i
+                    last_valid = i
             _mem.mdc_num = valid_mdc
 
             # scanlist stuff
@@ -2489,24 +2464,23 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         rs = RadioSetting("mdc_descr1", "MDC 联系人", val)
         mdcc.append(rs)
 
-        for i in range(1, 16):
+        for i in range(1, 12):
             mdc_id = "MDC_ID_" + str(i)
             mdc_name = "MDC_NAME_" + str(i)
             mdc_id_descr = "联系人" + str(i) + " | MDC ID"
             mdc_name_descr = "联系人" + str(i) + " | 名称"
             if i <= int(_mem.mdc_num):
-                if i <= 12:
-                    c_id = ''.join(['{:02X}'.format(int(byte)) for byte in _mem.mdccontact1[i - 1].id])
-                    c_name = str(_mem.mdccontact1[i - 1].name)
-                else:
-                    c_id = ''.join(['{:02X}'.format(int(byte)) for byte in _mem.mdccontact2[i - 13].id])
-                    c_name = str(_mem.mdccontact2[i - 13].name)
+                c_id = ''.join(['{:02X}'.format(int(byte)) for byte in _mem.mdccontact1[i - 1].id])
+                c_name = str(_mem.mdccontact1[i - 1].name)
 
                 val = RadioSettingValueString(0, 4, c_id, charset=' 0123456789ABCDEF')
                 rs = RadioSetting(mdc_id, mdc_id_descr, val)
                 mdcc.append(rs)
 
-                val = RadioSettingValueString(0, 14, c_name)
+                try:
+                    val = RadioSettingValueString(0, 14, c_name)
+                except Exception:
+                    val = RadioSettingValueString(0, 14, '')
                 rs = RadioSetting(mdc_name, mdc_name_descr, val)
                 mdcc.append(rs)
             else:
