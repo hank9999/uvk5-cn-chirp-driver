@@ -276,7 +276,7 @@ UVK5_POWER_LEVELS = [chirp_common.PowerLevel("Low",  watts=1.50),
 SCRAMBLER_LIST = ["off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 
 # channel display mode
-CHANNELDISP_LIST = ["Frequency", "Channel No", "Channel Name"]
+CHANNELDISP_LIST = ["频率", "信道号", "名称", "名称+频率"]
 # battery save
 BATSAVE_LIST = ["OFF", "1:1", "1:2", "1:3", "1:4"]
 
