@@ -1433,6 +1433,8 @@ def do_download(radio):
 
 
 def do_extra_download(radio):
+    if not radio.FIRMWARE_VERSION.endswith('K'):
+        return [b'', b'']
     serport = radio.pipe
     serport.timeout = 0.5
     status = chirp_common.Status()
@@ -1509,21 +1511,25 @@ def do_extra_upload(radio):
     else:
         return False
 
-    welcome_logo = radio.get_welcome_logo()
-    _write_extra_mem(serport, 0x01, 0xE31E, bytes([len(x) for x in welcome_logo]))
-    status.cur += 1
-    radio.status_fn(status)
-    _write_extra_mem(serport, 0x01, 0xE320, b'\x00' * 18)
-    _write_extra_mem(serport, 0x01, 0xE320, welcome_logo[0])
-    status.cur += 1
-    radio.status_fn(status)
-    _write_extra_mem(serport, 0x01, 0xE333, b'\x00' * 18)
-    _write_extra_mem(serport, 0x01, 0xE333, welcome_logo[1])
-    status.cur += 1
-    radio.status_fn(status)
+    if radio.FIRMWARE_VERSION.endswith('K'):
+        welcome_logo = radio.get_welcome_logo()
+        _write_extra_mem(serport, 0x01, 0xE31E, bytes([len(x) for x in welcome_logo]))
+        status.cur += 1
+        radio.status_fn(status)
+        _write_extra_mem(serport, 0x01, 0xE320, b'\x00' * 18)
+        _write_extra_mem(serport, 0x01, 0xE320, welcome_logo[0])
+        status.cur += 1
+        radio.status_fn(status)
+        _write_extra_mem(serport, 0x01, 0xE333, b'\x00' * 18)
+        _write_extra_mem(serport, 0x01, 0xE333, welcome_logo[1])
+        status.cur += 1
+        radio.status_fn(status)
+    else:
+        status.cur += 3
+        radio.status_fn(status)
 
     _memobj = radio.get_memobj()
-    _write_extra_mem(serport, 0x0, 0x1FFF, _memobj.mdc_num.get_raw())
+    _writemem(serport, _memobj.mdc_num.get_raw(), 0x1FFF)
     status.cur += 1
     radio.status_fn(status)
 
@@ -1533,7 +1539,7 @@ def do_extra_upload(radio):
         mdc_id = mdc_obj.id
         mdc_name = mdc_obj.name
         data = mdc_id.get_raw() + mdc_name.get_raw()
-        _write_extra_mem(serport, 0x0, addr, data)
+        _writemem(serport, data, addr)
         addr += 0x10
         status.cur += 1
         radio.status_fn(status)
@@ -2058,13 +2064,21 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
             # Logo string 1
             if element.get_name() == "logo1":
-                b = convert_chinese_to_ascii_chars(element.value).encode('latin-1')
-                self._welcome_logo[0] = b[0:18]
+                if self.FIRMWARE_VERSION.endswith('K'):
+                    b = convert_chinese_to_ascii_chars(element.value).encode('latin-1')
+                    self._welcome_logo[0] = b[0:18]
+                else:
+                    b = str(element.value).rstrip("\x20\xff\x00") + "\x00" * 12
+                    _mem.logo_line1 = b[0:12] + "\x00\xff\xff\xff"
 
             # Logo string 2
             if element.get_name() == "logo2":
-                b = convert_chinese_to_ascii_chars(element.value).encode('latin-1')
-                self._welcome_logo[1] = b[0:18]
+                if self.FIRMWARE_VERSION.endswith('K'):
+                    b = convert_chinese_to_ascii_chars(element.value).encode('latin-1')
+                    self._welcome_logo[1] = b[0:18]
+                else:
+                    b = str(element.value).rstrip("\x20\xff\x00") + "\x00" * 12
+                    _mem.logo_line2 = b[0:12] + "\x00\xff\xff\xff"
 
             # unlock settings
 
@@ -2815,15 +2829,27 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         basic.append(rs)
 
         # Logo string 1
-        logo1 = convert_bytes_to_chinese(self._welcome_logo[0])
-        rs = RadioSetting("logo1", _("欢迎字符1 (18字符)"),
-                          RadioSettingChineseValueString(0, 18, logo1, False, VALID_CHARACTERS))
+        if self.FIRMWARE_VERSION.endswith('K'):
+            logo1 = convert_bytes_to_chinese(self._welcome_logo[0])
+            rs = RadioSetting("logo1", _("欢迎字符1 (18字符)"),
+                              RadioSettingChineseValueString(0, 18, logo1, False, VALID_CHARACTERS))
+        else:
+            logo1 = str(_mem.logo_line1).strip("\x20\x00\xff") + "\x00"
+            logo1 = _getstring(logo1.encode('ascii', errors='ignore'), 0, 12)
+            rs = RadioSetting("logo1", _("欢迎字符1 (12字符)"),
+                              RadioSettingChineseValueString(0, 12, logo1, False))
         basic.append(rs)
 
         # Logo string 2
-        logo2 = convert_bytes_to_chinese(self._welcome_logo[1])
-        rs = RadioSetting("logo2", _("欢迎字符2 (18字符)"),
-                          RadioSettingChineseValueString(0, 18, logo2, False, VALID_CHARACTERS))
+        if self.FIRMWARE_VERSION.endswith('K'):
+            logo2 = convert_bytes_to_chinese(self._welcome_logo[1])
+            rs = RadioSetting("logo2", _("欢迎字符2 (18字符)"),
+                              RadioSettingChineseValueString(0, 18, logo2, False, VALID_CHARACTERS))
+        else:
+            logo2 = str(_mem.logo_line2).strip("\x20\x00\xff") + "\x00"
+            logo2 = _getstring(logo2.encode('ascii', errors='ignore'), 0, 12)
+            rs = RadioSetting("logo2", _("欢迎字符2 (12字符)"),
+                              RadioSettingChineseValueString(0, 12, logo2, False))
         basic.append(rs)
 
         # FM radio
