@@ -719,7 +719,7 @@ def do_extra_download(radio):
     else:
         raise errors.RadioError('Unable to determine firmware version')
 
-    welcome_len = _read_extra_mem(serport, 0x01, 0x02, 0xE320)
+    welcome_len = _read_extra_mem(serport, 0x01, 0x02, 0xE31E)
     status.cur = 1
     radio.status_fn(status)
     welcome_len1, welcome_len2 = welcome_len
