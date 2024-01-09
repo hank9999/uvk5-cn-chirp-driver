@@ -210,13 +210,10 @@ char unused_00[5];
 } dtmfcontact[16];
 
 #seekto 0x1d00;
-u8 mdc_num;
-
-#seekto 0x1d48;
 struct {
     u8 id[2];
     char name[14];
-} mdccontact1[11];
+} mdccontact1[16];
 
 #seekto 0x1ed0;
 struct {
@@ -240,6 +237,15 @@ u8 unused_00[7];
 
 #seekto 0x1f40;
 ul16 battery_level[6];
+
+#seekto 0x1f90;
+struct {
+    u8 id[2];
+    char name[14];
+} mdccontact2[6];
+
+#seekto 0x1fff;
+u8 mdc_num;
 """
 # bits that we will save from the channel structure (mostly unknown)
 SAVE_MASK_0A = 0b11001100
@@ -457,6 +463,13 @@ class RadioSettingChineseValueString(RadioSettingValueString):
                 raise InvalidValueError("Value contains invalid " +
                                         "character `%s'" % char)
         RadioSettingValue.set_value(self, value)
+
+
+def get_mdc_contact_object(mem_obj, index):
+    if index <= 16:
+        return mem_obj.mdccontact1[index - 1]
+    else:
+        return mem_obj.mdccontact2[index - 17]
 
 
 # the communication is obfuscated using this fine mechanism
@@ -771,7 +784,7 @@ def do_extra_upload(radio):
     serport.timeout = 0.5
     status = chirp_common.Status()
     status.cur = 0
-    status.max = 15
+    status.max = 26
     status.msg = "Uploading add data to radio"
     radio.status_fn(status)
 
@@ -794,19 +807,23 @@ def do_extra_upload(radio):
     status.cur += 1
     radio.status_fn(status)
 
-    addr = 0x1D48
     _memobj = radio.get_memobj()
-    _write_extra_mem(serport, 0x0, 0x1D00, _memobj.mdc_num.get_raw())
+    _write_extra_mem(serport, 0x0, 0x1FFF, _memobj.mdc_num.get_raw())
     status.cur += 1
     radio.status_fn(status)
-    for i in range(1, 12):
-        mdc_id = _memobj.mdccontact1[i - 1].id
-        mdc_name = _memobj.mdccontact1[i - 1].name
+
+    addr = 0x1D00
+    for i in range(1, 23):
+        mdc_obj = get_mdc_contact_object(_memobj, i)
+        mdc_id = mdc_obj.id
+        mdc_name = mdc_obj.name
         data = mdc_id.get_raw() + mdc_name.get_raw()
         _write_extra_mem(serport, 0x0, addr, data)
         addr += 0x10
         status.cur += 1
         radio.status_fn(status)
+        if i == 16:
+            addr = 0x1F90
     status.msg = "Uploaded OK"
 
     return True
@@ -1460,17 +1477,18 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             element_name = element.get_name()
             valid_mdc = 0
             last_valid = 0
-            for i in range(1, 12):
+            for i in range(1, 23):
                 mdc_id = "MDC_ID_" + str(i)
                 mdc_name = "MDC_NAME_" + str(i)
                 if element_name == mdc_id:
                     k = str(element.value).replace(' ', '').rjust(4, '0')
-                    _mem.mdccontact1[i - 1].id = bytes.fromhex(k)[0:2]
+                    get_mdc_contact_object(_mem, i).id = bytes.fromhex(k)[0:2]
 
                 if element_name == mdc_name:
-                    _mem.mdccontact1[i - 1].name = str(element.value)[0:14]
+                    get_mdc_contact_object(_mem, i).name = str(element.value)[0:14]
 
-                is_not_empty = _mem.mdccontact1[i - 1].id.get_raw() != b'\x00' * 2 and _mem.mdccontact1[i - 1].name.get_raw() != b'\x20' * 20
+                mdc_obj = get_mdc_contact_object(_mem, i)
+                is_not_empty = mdc_obj.id.get_raw() != b'\x00' * 2 and mdc_obj.name.get_raw() != b'\x20' * 20
                 if is_not_empty and (last_valid == i - 1 or last_valid == 0):
                     valid_mdc = i
                     last_valid = i
@@ -1779,14 +1797,15 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         rs = RadioSetting("mdc_descr1", "MDC 联系人", val)
         mdcc.append(rs)
 
-        for i in range(1, 12):
+        for i in range(1, 23):
             mdc_id = "MDC_ID_" + str(i)
             mdc_name = "MDC_NAME_" + str(i)
             mdc_id_descr = "联系人" + str(i) + " | MDC ID"
             mdc_name_descr = "联系人" + str(i) + " | 名称"
             if i <= int(_mem.mdc_num):
-                c_id = ''.join(['{:02X}'.format(int(byte)) for byte in _mem.mdccontact1[i - 1].id])
-                c_name = str(_mem.mdccontact1[i - 1].name)
+                mdc_obj = get_mdc_contact_object(_mem, i)
+                c_id = ''.join(['{:02X}'.format(int(byte)) for byte in mdc_obj.id])
+                c_name = str(mdc_obj.name)
 
                 val = RadioSettingValueString(0, 4, c_id, charset=' 0123456789ABCDEF')
                 rs = RadioSetting(mdc_id, mdc_id_descr, val)
