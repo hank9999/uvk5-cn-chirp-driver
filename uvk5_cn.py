@@ -1306,40 +1306,42 @@ def _readmem(serport, offset, length):
     return o[8:]
 
 
-def _read_add_mem(serport, offset, length, add: list):
+def _read_extra_mem(serport, offset: int, length: int, extra: int):
+    extra_bytes = struct.pack("<H", extra)
     LOG.debug(
-        "Sending read_add_mem offset=0x%4.4x len=0x%4.4x add=[0x%4.4x, 0x%4.4x]" % (offset, length, add[0], add[1]))
+        "Sending read_extra_mem offset=0x%4.4x len=0x%4.4x extra=0x%4.4x" % (offset, length, extra))
 
     readmem = b"\x2b\x05\x08\x00" + \
               struct.pack("<HBB", offset, length, 0) + \
               b"\x6a\x39\x57\x64" + \
-              struct.pack("<BB", add[0], add[1])
+              extra_bytes
     _send_command(serport, readmem)
     o = _receive_reply(serport)
     if DEBUG_SHOW_MEMORY_ACTIONS:
-        LOG.debug("read_add_mem Received data len=0x%4.4x:\n%s" %
+        LOG.debug("read_extra_mem Received data len=0x%4.4x:\n%s" %
                   (len(o), util.hexprint(o)))
     return o[8:]
 
 
-def _write_add_mem(serport, offset, add, data):
-    length = len(data) + len(add)
-    LOG.debug("Sending write_add_mem offset=0x%4.4x len=0x%4.4x add=[0x%4.4x, 0x%4.4x]" %
-              (offset, length, add[0], add[1]))
+def _write_extra_mem(serport, offset: int, extra: int, data):
+    extra_bytes = struct.pack("<H", extra)
+    length = len(data) + len(extra_bytes)
+    LOG.debug("Sending write_extra_mem offset=0x%4.4x len=0x%4.4x extra=0x%4.4x" %
+              (offset, length, extra))
 
     if DEBUG_SHOW_MEMORY_ACTIONS:
-        LOG.debug("write_add_mem sent data offset=0x%4.4x len=0x%4.4x add=[0x%4.4x, 0x%4.4x]:\n%s" %
-                  (offset, length, add[0], add[1], util.hexprint(data)))
+        LOG.debug("write_extra_mem sent data offset=0x%4.4x len=0x%4.4x add=0x%4.4x:\n%s" %
+                  (offset, length, extra, util.hexprint(data)))
 
     writemem = b"\x38\x05\x1c\x00" + \
         struct.pack("<HBB", offset, length, 0) + \
         b"\x6a\x39\x57\x64" + \
-        struct.pack("<BB", add[0], add[1]) + data
+        extra_bytes + data
 
     _send_command(serport, writemem)
     o = _receive_reply(serport)
 
-    LOG.debug("write_add_mem Received data: %s len=%i" % (util.hexprint(o), len(o)))
+    LOG.debug("write_extra_mem Received data: %s len=%i" % (util.hexprint(o), len(o)))
 
     if (o[0] == 0x1e
             and
@@ -1348,8 +1350,8 @@ def _write_add_mem(serport, offset, add, data):
             o[5] == (offset >> 8) & 0xff):
         return True
     else:
-        LOG.warning("Bad data from write_add_mem")
-        raise errors.RadioError("Bad response to write_add_mem")
+        LOG.warning("Bad data from write_extra_mem")
+        raise errors.RadioError("Bad response to write_extra_mem")
 
 
 def _writemem(serport, data, offset):
@@ -1432,7 +1434,7 @@ def do_add_download(radio):
     else:
         raise errors.RadioError('Unable to determine firmware version')
 
-    welcome_len = _read_add_mem(serport, 0x01, 0x02, [0x1E, 0xE3])
+    welcome_len = _read_extra_mem(serport, 0x01, 0x02, [0x1E, 0xE3])
     status.cur = 1
     radio.status_fn(status)
     welcome_len1, welcome_len2 = welcome_len
@@ -1440,10 +1442,10 @@ def do_add_download(radio):
         welcome_len1 = 18
     if welcome_len2 > 18:
         welcome_len2 = 18
-    welcome_text_1 = _read_add_mem(serport, 0x01, welcome_len1, [0x20, 0xE3])
+    welcome_text_1 = _read_extra_mem(serport, 0x01, welcome_len1, [0x20, 0xE3])
     status.cur = 2
     radio.status_fn(status)
-    welcome_text_2 = _read_add_mem(serport, 0x01, welcome_len2, [0x33, 0xE3])
+    welcome_text_2 = _read_extra_mem(serport, 0x01, welcome_len2, [0x33, 0xE3])
     status.cur = 3
     radio.status_fn(status)
     return [welcome_text_1, welcome_text_2]
@@ -1495,28 +1497,28 @@ def do_add_upload(radio):
         return False
 
     welcome_logo = radio.get_welcome_logo()
-    _write_add_mem(serport, 0x01, [0x1E, 0xE3], bytes([len(x) for x in welcome_logo]))
+    _write_extra_mem(serport, 0x01, 0xE31E, bytes([len(x) for x in welcome_logo]))
     status.cur += 1
     radio.status_fn(status)
-    _write_add_mem(serport, 0x01, [0x20, 0xE3], b'\x00' * 18)
-    _write_add_mem(serport, 0x01, [0x20, 0xE3], welcome_logo[0])
+    _write_extra_mem(serport, 0x01, 0xE320, b'\x00' * 18)
+    _write_extra_mem(serport, 0x01, 0xE320, welcome_logo[0])
     status.cur += 1
     radio.status_fn(status)
-    _write_add_mem(serport, 0x01, [0x33, 0xE3], b'\x00' * 18)
-    _write_add_mem(serport, 0x01, [0x33, 0xE3], welcome_logo[1])
+    _write_extra_mem(serport, 0x01, 0xE333, b'\x00' * 18)
+    _write_extra_mem(serport, 0x01, 0xE333, welcome_logo[1])
     status.cur += 1
     radio.status_fn(status)
 
     addr = 0x1D48
     _memobj = radio.get_memobj()
-    _write_add_mem(serport, 0x0, struct.pack("<H", 0x1D00), _memobj.mdc_num.get_raw())
+    _write_extra_mem(serport, 0x0, 0x1D00, _memobj.mdc_num.get_raw())
     status.cur += 1
     radio.status_fn(status)
     for i in range(1, 12):
         mdc_id = _memobj.mdccontact1[i - 1].id
         mdc_name = _memobj.mdccontact1[i - 1].name
         data = mdc_id.get_raw() + mdc_name.get_raw()
-        _write_add_mem(serport, 0x0, struct.pack("<H", addr), data)
+        _write_extra_mem(serport, 0x0, addr, data)
         addr += 0x10
         status.cur += 1
         radio.status_fn(status)
