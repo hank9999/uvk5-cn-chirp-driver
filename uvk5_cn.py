@@ -704,7 +704,7 @@ def do_download(radio):
     return memmap.MemoryMapBytes(eeprom)
 
 
-def do_add_download(radio):
+def do_extra_download(radio):
     serport = radio.pipe
     serport.timeout = 0.5
     status = chirp_common.Status()
@@ -719,7 +719,7 @@ def do_add_download(radio):
     else:
         raise errors.RadioError('Unable to determine firmware version')
 
-    welcome_len = _read_extra_mem(serport, 0x01, 0x02, [0x1E, 0xE3])
+    welcome_len = _read_extra_mem(serport, 0x01, 0x02, 0xE320)
     status.cur = 1
     radio.status_fn(status)
     welcome_len1, welcome_len2 = welcome_len
@@ -727,10 +727,10 @@ def do_add_download(radio):
         welcome_len1 = 18
     if welcome_len2 > 18:
         welcome_len2 = 18
-    welcome_text_1 = _read_extra_mem(serport, 0x01, welcome_len1, [0x20, 0xE3])
+    welcome_text_1 = _read_extra_mem(serport, 0x01, welcome_len1, 0xE320)
     status.cur = 2
     radio.status_fn(status)
-    welcome_text_2 = _read_extra_mem(serport, 0x01, welcome_len2, [0x33, 0xE3])
+    welcome_text_2 = _read_extra_mem(serport, 0x01, welcome_len2, 0xE333)
     status.cur = 3
     radio.status_fn(status)
     return [welcome_text_1, welcome_text_2]
@@ -766,7 +766,7 @@ def do_upload(radio):
     return True
 
 
-def do_add_upload(radio):
+def do_extra_upload(radio):
     serport = radio.pipe
     serport.timeout = 0.5
     status = chirp_common.Status()
@@ -911,13 +911,13 @@ class UVK5Radio(chirp_common.CloneModeRadio):
     # Do a download of the radio from the serial port
     def sync_in(self):
         self._mmap = do_download(self)
-        self._welcome_logo = do_add_download(self)
+        self._welcome_logo = do_extra_download(self)
         self.process_mmap()
 
     # Do an upload of the radio to the serial port
     def sync_out(self):
         do_upload(self)
-        do_add_upload(self)
+        do_extra_upload(self)
         _resetradio(self.pipe)
 
     # Convert the raw byte array into a memory object structure
