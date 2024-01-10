@@ -1630,7 +1630,6 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         rf.valid_characters = VALID_CHARACTERS
         rf.valid_modes = ["FM", "NFM", "AM", "NAM"]
-        rf.valid_tmodes = ["", "Tone", "TSQL", "DTCS", "Cross"]
 
         rf.valid_skips = [""]
 
