@@ -260,7 +260,7 @@ POWER_MEDIUM = 0b01
 POWER_LOW = 0b00
 
 # dtmf_flags
-PTTID_LIST = ["off", "BOT", "EOT", "BOTH"]
+PTTID_LIST = ["关闭", "BOT", "EOT", "BOTH"]
 
 # power
 UVK5_POWER_LEVELS = [chirp_common.PowerLevel("Low",  watts=1.50),
@@ -269,7 +269,7 @@ UVK5_POWER_LEVELS = [chirp_common.PowerLevel("Low",  watts=1.50),
                      ]
 
 # scrambler
-SCRAMBLER_LIST = ["off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+SCRAMBLER_LIST = ["关闭", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 
 # channel display mode
 CHANNELDISP_LIST = ["频率", "信道号", "名称", "名称+频率"]
@@ -280,7 +280,7 @@ BATSAVE_LIST = ["OFF", "1:1", "1:2", "1:3", "1:4"]
 BACKLIGHT_LIST = ["关闭", "5秒", "10秒", "20秒", "1分钟", "2分钟", "4分钟", "开启"]
 
 # Crossband receiving/transmitting
-CROSSBAND_LIST = ["Off", "Band A", "Band B"]
+CROSSBAND_LIST = ["关闭", "A段", "B段"]
 DUALWATCH_LIST = CROSSBAND_LIST
 
 # steps
@@ -320,17 +320,16 @@ DTCS_CODES = [
 
 FLOCK_LIST = ["默认+137-174 400-430", "FCC", "CE", "GB", "137-174 400-430", "137-174 400-438", "禁用全部", "解锁全部"]
 
-SCANRESUME_LIST = ["TO: Resume after 5 seconds",
-                   "CO: Resume after signal disappears",
-                   "SE: Stop scanning after receiving a signal"]
+SCANRESUME_LIST = ["TO: 收到信号5秒后恢复",
+                   "CO: 信号消失后恢复",
+                   "SE: 收到信号后停止扫描"]
 
-WELCOME_LIST = ["Full Screen", "Welcome Info", "Voltage"]
-KEYPADTONE_LIST = ["Off", "Chinese", "English"]
-LANGUAGE_LIST = ["Chinese", "English"]
-ALARMMODE_LIST = ["SITE", "TONE"]
 WELCOME_LIST = ["关闭", "图片", "信息"]
+KEYPADTONE_LIST = ["Off", "中文", "English"]
+LANGUAGE_LIST = ["中文", "English"]
+ALARMMODE_LIST = ["本机", "本机+远程"]
 REMENDOFTALK_LIST = ["关闭", "ROGER尾音", "MDC尾音", "MDC首音", "MDC首尾音", "MDC首音+ROGER"]
-RTE_LIST = ["Off", "100ms", "200ms", "300ms", "400ms",
+RTE_LIST = ["关闭", "100ms", "200ms", "300ms", "400ms",
             "500ms", "600ms", "700ms", "800ms", "900ms"]
 
 MEM_SIZE = 0x2000  # size of all memory
@@ -388,14 +387,14 @@ VFO_CHANNEL_NAMES = ["F1(50M-76M)A", "F1(50M-76M)B",
                      "F6(400M-470M)A", "F6(400M-470M)B",
                      "F7(470M-600M)A", "F7(470M-600M)B"]
 
-SCANLIST_LIST = ["None", "1", "2", "1+2"]
+SCANLIST_LIST = ["无", "1", "2", "1+2"]
 
 DTMF_CHARS = "0123456789ABCD*# "
 DTMF_CHARS_ID = "0123456789ABCDabcd"
 DTMF_CHARS_KILL = "0123456789ABCDabcd"
 DTMF_CHARS_UPDOWN = "0123456789ABCDabcd#* "
 DTMF_CODE_CHARS = "ABCD*# "
-DTMF_DECODE_RESPONSE_LIST = ["None", "Ring", "Reply", "Both"]
+DTMF_DECODE_RESPONSE_LIST = ["无", "响铃", "回复", "响铃+回复"]
 
 # KEYACTIONS_LIST = ["None", "Flashlight on/off", "Power select",
 #                    "Monitor", "Scan on/off", "VOX on/off",
@@ -1406,7 +1405,7 @@ def do_download(radio):
     status = chirp_common.Status()
     status.cur = 0
     status.max = MEM_SIZE
-    status.msg = "Downloading from radio"
+    status.msg = "正在从电台下载数据"
     radio.status_fn(status)
 
     eeprom = b""
@@ -1414,7 +1413,7 @@ def do_download(radio):
     if f:
         radio.FIRMWARE_VERSION = f
     else:
-        raise errors.RadioError('Unable to determine firmware version')
+        raise errors.RadioError('无法检测固件版本')
 
     addr = 0
     while addr < MEM_SIZE:
@@ -1426,7 +1425,7 @@ def do_download(radio):
             eeprom += o
             addr += MEM_BLOCK
         else:
-            raise errors.RadioError("Memory download incomplete")
+            raise errors.RadioError("信道未完全下载")
 
     return memmap.MemoryMapBytes(eeprom)
 
@@ -1439,14 +1438,14 @@ def do_extra_download(radio):
     status = chirp_common.Status()
     status.cur = 0
     status.max = 3
-    status.msg = "Downloading added data from radio"
+    status.msg = "正在从电台下载扩容部分数据"
     radio.status_fn(status)
 
     f = _sayhello(serport)
     if f:
         radio.FIRMWARE_VERSION = f
     else:
-        raise errors.RadioError('Unable to determine firmware version')
+        raise errors.RadioError('无法检测固件版本')
 
     welcome_len = _read_extra_mem(serport, 0x01, 0x02, 0xE31E)
     status.cur = 1
@@ -1471,7 +1470,7 @@ def do_upload(radio):
     status = chirp_common.Status()
     status.cur = 0
     status.max = PROG_SIZE
-    status.msg = "Uploading to radio"
+    status.msg = "正在向电台上传数据"
     radio.status_fn(status)
 
     f = _sayhello(serport)
@@ -1489,8 +1488,8 @@ def do_upload(radio):
         if o:
             addr += MEM_BLOCK
         else:
-            raise errors.RadioError("Memory upload incomplete")
-    status.msg = "Uploaded OK"
+            raise errors.RadioError("信道未完全上传")
+    status.msg = "上传数据完成"
 
     return True
 
@@ -1501,7 +1500,7 @@ def do_extra_upload(radio):
     status = chirp_common.Status()
     status.cur = 0
     status.max = 26
-    status.msg = "Uploading add data to radio"
+    status.msg = "正在向电台上传扩容部分数据"
     radio.status_fn(status)
 
     f = _sayhello(serport)
@@ -1544,7 +1543,7 @@ def do_extra_upload(radio):
         radio.status_fn(status)
         if i == 16:
             addr = 0x1F90
-    status.msg = "Uploaded OK"
+    status.msg = "扩容部分数据上传完成"
 
     return True
 
@@ -1582,28 +1581,28 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
     def get_prompts(x=None):
         rp = chirp_common.RadioPrompts()
-        rp.experimental = _(
-            'This is an experimental driver for the Quansheng UV-K5. '
-            'It may harm your radio, or worse. Use at your own risk.\n\n'
-            'Before attempting to do any changes please download '
-            'the memory image from the radio with chirp '
-            'and keep it. This can be later used to recover the '
-            'original settings. \n\n'
-            'some details are not yet implemented')
-        rp.pre_download = _(
-            "1. Turn radio on.\n"
-            "2. Connect cable to mic/spkr connector.\n"
-            "3. Make sure connector is firmly connected.\n"
-            "4. Click OK to download image from device.\n\n"
-            "It will may not work if you turn on the radio "
-            "with the cable already attached\n")
-        rp.pre_upload = _(
-            "1. Turn radio on.\n"
-            "2. Connect cable to mic/spkr connector.\n"
-            "3. Make sure connector is firmly connected.\n"
-            "4. Click OK to upload the image to device.\n\n"
-            "It will may not work if you turn on the radio "
-            "with the cable already attached")
+        rp.experimental = (
+            '这是用于 Quansheng UV-K5 的实验性驱动。它可能会损坏您的电台，甚至更糟。请自行承担风险。\n'
+            '\n' 
+            '在尝试进行任何更改之前，请使用 CHIRP 从电台中下载信道镜像并保存下来。这稍后可以用于恢复原始设置。\n'
+            '\n'
+            '一些细节尚未实现')
+        rp.pre_download = (
+            "1. 打开电台。\n"
+            "2. 将写频线连接到麦克风/扬声器接口。\n"
+            "3. 确保连接牢固。\n"
+            "4. 点击确定 从设备下载镜像。\n"
+            "\n"
+            "如果在写频线已经连接的情况下打开电台，可能无法正常使用\n"
+        )
+        rp.pre_upload = (
+            "1. 打开电台。\n"
+            "2. 将写频线连接到麦克风/扬声器接口。\n"
+            "3. 确保连接牢固。\n"
+            "4. 点击确定 将镜像上传到设备。\n"
+            "\n"
+            "如果在写频线已经连接的情况下打开电台，可能无法正常使用\n"
+        )
         return rp
 
     # Return information about this radio's features, including
@@ -1817,7 +1816,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                 RadioSettingValueBoolean(False))
             mem.extra.append(rs)
             rs = RadioSetting(
-                "frev", "FreqRev",
+                "frev", "倒频",
                 RadioSettingValueBoolean(False))
             mem.extra.append(rs)
             rs = RadioSetting(
@@ -1825,16 +1824,16 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                 RadioSettingValueList(PTTID_LIST, PTTID_LIST[0]))
             mem.extra.append(rs)
             rs = RadioSetting(
-                "dtmfdecode", _("DTMF decode"),
+                "dtmfdecode", "DTMF 解码",
                 RadioSettingValueBoolean(False))
             mem.extra.append(rs)
             rs = RadioSetting(
-                "scrambler", _("Scrambler"),
+                "scrambler", "扰频",
                 RadioSettingValueList(SCRAMBLER_LIST, SCRAMBLER_LIST[0]))
             mem.extra.append(rs)
 
             rs = RadioSetting(
-                "scanlists", _("Scanlists"),
+                "scanlists", "扫描列表",
                 RadioSettingValueList(SCANLIST_LIST, SCANLIST_LIST[0]))
             mem.extra.append(rs)
 
@@ -1917,7 +1916,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         # Frequency reverse - whatever that means, don't see it in the manual
         is_frev = bool(_mem.freq_reverse > 0)
-        rs = RadioSetting("frev", "FreqRev", RadioSettingValueBoolean(is_frev))
+        rs = RadioSetting("frev", "倒频", RadioSettingValueBoolean(is_frev))
         mem.extra.append(rs)
         tmpcomment += "FreqReverse:"+(is_frev and "ON" or "off")+" "
 
@@ -1930,7 +1929,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         # DTMF DECODE
         is_dtmf = bool(_mem.dtmf_decode > 0)
-        rs = RadioSetting("dtmfdecode", _("DTMF decode"),
+        rs = RadioSetting("dtmfdecode", "DTMF 解码",
                           RadioSettingValueBoolean(is_dtmf))
         mem.extra.append(rs)
         tmpcomment += "DTMFdecode:"+(is_dtmf and "ON" or "off")+" "
@@ -1941,12 +1940,12 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         else:
             enc = 0
 
-        rs = RadioSetting("scrambler", _("Scrambler"), RadioSettingValueList(
+        rs = RadioSetting("scrambler", "扰频", RadioSettingValueList(
             SCRAMBLER_LIST, SCRAMBLER_LIST[enc]))
         mem.extra.append(rs)
         tmpcomment += "Scrambler:"+SCRAMBLER_LIST[enc]+" "
 
-        rs = RadioSetting("scanlists", _("Scanlists"), RadioSettingValueList(
+        rs = RadioSetting("scanlists", "扫描列表", RadioSettingValueList(
             SCANLIST_LIST, tmpscn))
         mem.extra.append(rs)
 
@@ -2280,16 +2279,16 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
     def get_settings(self):
         _mem = self._memobj
-        basic = RadioSettingGroup("basic", "Basic Settings")
+        basic = RadioSettingGroup("basic", "基本设置")
         # keya = RadioSettingGroup("keya", "Programmable keys")
-        dtmf = RadioSettingGroup("dtmf", "DTMF Settings")
-        dtmfc = RadioSettingGroup("dtmfc", "DTMF Contacts")
+        dtmf = RadioSettingGroup("dtmf", "DTMF 设置")
+        dtmfc = RadioSettingGroup("dtmfc", "DTMF 联系人")
         mdcc = RadioSettingGroup("mdcc", "MDC 联系人")
-        scanl = RadioSettingGroup("scn", "Scan Lists")
-        unlock = RadioSettingGroup("unlock", "Unlock Settings")
-        fmradio = RadioSettingGroup("fmradio", _("FM Radio"))
+        scanl = RadioSettingGroup("scn", "扫描列表")
+        unlock = RadioSettingGroup("unlock", "解锁设置")
+        fmradio = RadioSettingGroup("fmradio", "FM广播")
 
-        roinfo = RadioSettingGroup("roinfo", _("Driver information"))
+        roinfo = RadioSettingGroup("roinfo", "设备信息")
 
         # top = RadioSettings(
         #         basic, keya, dtmf, dtmfc, mdcc, scanl, unlock, fmradio, roinfo)
@@ -2334,7 +2333,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         tmppr = bool(_mem.dtmf_settings.side_tone > 0)
         rs = RadioSetting(
                 "dtmf_side_tone",
-                "DTMF Sidetone",
+                "DTMF 侧音",
                 RadioSettingValueBoolean(tmppr))
         dtmf.append(rs)
 
@@ -2343,7 +2342,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmpval = '*'
         val = RadioSettingValueString(1, 1, tmpval)
         val.set_charset(DTMF_CODE_CHARS)
-        rs = RadioSetting("dtmf_separate_code", "Separate Code", val)
+        rs = RadioSetting("dtmf_separate_code", "分隔码", val)
         dtmf.append(rs)
 
         tmpval = str(_mem.dtmf_settings.group_call_code)
@@ -2351,13 +2350,13 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmpval = '#'
         val = RadioSettingValueString(1, 1, tmpval)
         val.set_charset(DTMF_CODE_CHARS)
-        rs = RadioSetting("dtmf_group_call_code", "Group Call Code", val)
+        rs = RadioSetting("dtmf_group_call_code", "组呼码", val)
         dtmf.append(rs)
 
         tmpval = _mem.dtmf_settings.decode_response
         if tmpval >= len(DTMF_DECODE_RESPONSE_LIST):
             tmpval = 0
-        rs = RadioSetting("dtmf_decode_response", "Decode Response",
+        rs = RadioSetting("dtmf_decode_response", "解码响应",
                           RadioSettingValueList(
                               DTMF_DECODE_RESPONSE_LIST,
                               DTMF_DECODE_RESPONSE_LIST[tmpval]))
@@ -2367,7 +2366,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         if tmpval > 60 or tmpval < 5:
             tmpval = 5
         rs = RadioSetting("dtmf_auto_reset_time",
-                          "Auto reset time (s)",
+                          "自动复位时间 (秒)",
                           RadioSettingValueInteger(5, 60, tmpval))
         dtmf.append(rs)
 
@@ -2376,7 +2375,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmpval = 30
         tmpval *= 10
         rs = RadioSetting("dtmf_preload_time",
-                          "Pre-load time (ms)",
+                          "预载波时间 (ms)",
                           RadioSettingValueInteger(30, 1000, tmpval, 10))
         dtmf.append(rs)
 
@@ -2385,7 +2384,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmpval = 30
         tmpval *= 10
         rs = RadioSetting("dtmf_first_code_persist_time",
-                          "First code persist time (ms)",
+                          "首码持续时间 (ms)",
                           RadioSettingValueInteger(30, 1000, tmpval, 10))
         dtmf.append(rs)
 
@@ -2394,7 +2393,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmpval = 30
         tmpval *= 10
         rs = RadioSetting("dtmf_hash_persist_time",
-                          "#/* persist time (ms)",
+                          "*/# 码持续时间 (ms)",
                           RadioSettingValueInteger(30, 1000, tmpval, 10))
         dtmf.append(rs)
 
@@ -2403,7 +2402,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmpval = 30
         tmpval *= 10
         rs = RadioSetting("dtmf_code_persist_time",
-                          "Code persist time (ms)",
+                          "单码持续时间 (ms)",
                           RadioSettingValueInteger(30, 1000, tmpval, 10))
         dtmf.append(rs)
 
@@ -2412,14 +2411,14 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmpval = 30
         tmpval *= 10
         rs = RadioSetting("dtmf_code_interval_time",
-                          "Code interval time (ms)",
+                          "码间间隔时间 (ms)",
                           RadioSettingValueInteger(30, 1000, tmpval, 10))
         dtmf.append(rs)
 
         tmpval = bool(_mem.dtmf_settings.permit_remote_kill > 0)
         rs = RadioSetting(
                 "dtmf_permit_remote_kill",
-                "Permit remote kill",
+                "允许遥毙",
                 RadioSettingValueBoolean(tmpval))
         dtmf.append(rs)
 
@@ -2434,7 +2433,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         val = RadioSettingValueString(3, 3, tmpval)
         val.set_charset(DTMF_CHARS_ID)
         rs = RadioSetting("dtmf_dtmf_local_code",
-                          "Local code (3 chars 0-9 ABCD)", val)
+                          "本机号码 (3字符 0-9 ABCD)", val)
         dtmf.append(rs)
 
         tmpval = str(_mem.dtmf_settings_numbers.dtmf_up_code).upper().strip(
@@ -2448,7 +2447,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         val = RadioSettingValueString(1, 16, tmpval)
         val.set_charset(DTMF_CHARS_UPDOWN)
         rs = RadioSetting("dtmf_dtmf_up_code",
-                          "Up code (1-16 chars 0-9 ABCD*#)", val)
+                          "上线码 (1-16字符 0-9 ABCD*#)", val)
         dtmf.append(rs)
 
         tmpval = str(_mem.dtmf_settings_numbers.dtmf_down_code).upper().strip(
@@ -2462,7 +2461,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         val = RadioSettingValueString(1, 16, tmpval)
         val.set_charset(DTMF_CHARS_UPDOWN)
         rs = RadioSetting("dtmf_dtmf_down_code",
-                          "Down code (1-16 chars 0-9 ABCD*#)", val)
+                          "下线码 (1-16字符 0-9 ABCD*#)", val)
         dtmf.append(rs)
 
         tmpval = str(_mem.dtmf_settings_numbers.kill_code).upper().strip(
@@ -2478,7 +2477,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         val = RadioSettingValueString(5, 5, tmpval)
         val.set_charset(DTMF_CHARS_KILL)
         rs = RadioSetting("dtmf_kill_code",
-                          "Kill code (5 chars 0-9 ABCD)", val)
+                          "遥毙码 (5字符 0-9 ABCD)", val)
         dtmf.append(rs)
 
         tmpval = str(_mem.dtmf_settings_numbers.revive_code).upper().strip(
@@ -2494,22 +2493,22 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         val = RadioSettingValueString(5, 5, tmpval)
         val.set_charset(DTMF_CHARS_KILL)
         rs = RadioSetting("dtmf_revive_code",
-                          "Revive code (5 chars 0-9 ABCD)", val)
+                          "唤醒码 (5字符 0-9 ABCD)", val)
         dtmf.append(rs)
 
         val = RadioSettingValueString(0, 80,
-                                      "All DTMF Contacts are 3 codes "
-                                      "(valid: 0-9 * # ABCD), "
-                                      "or an empty string")
+                                      "DTMF 联系人为3个字符"
+                                      "(有效值: 0-9 * # ABCD), "
+                                      "或者是空字符串", charset=VALID_CHARACTERS)
         val.set_mutable(False)
-        rs = RadioSetting("dtmf_descr1", "DTMF Contacts", val)
+        rs = RadioSetting("dtmf_descr1", "DTMF 联系人", val)
         dtmfc.append(rs)
 
         for i in range(1, 17):
-            varname = "DTMF_"+str(i)
-            varnumname = "DTMFNUM_"+str(i)
-            vardescr = "DTMF Contact "+str(i)+" name"
-            varinumdescr = "DTMF Contact "+str(i)+" number"
+            varname = "DTMF_" + str(i)
+            varnumname = "DTMFNUM_" + str(i)
+            vardescr = "联系人" + str(i) + " | 名称"
+            varinumdescr = "联系人" + str(i) + " | 号码"
 
             cntn = str(_mem.dtmfcontact[i-1].name).strip("\x20\x00\xff")
             cntnum = str(_mem.dtmfcontact[i-1].number).strip("\x20\x00\xff")
@@ -2565,14 +2564,14 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         else:
             tmpsc = 1
         rs = RadioSetting("scanlist_default",
-                          "Default scanlist",
+                          "默认扫描列表",
                           RadioSettingValueInteger(1, 2, tmpsc))
         scanl.append(rs)
 
         tmppr = bool((_mem.scanlist1_priority_scan & 1) > 0)
         rs = RadioSetting(
                 "scanlist1_priority_scan",
-                "Scanlist 1 priority channel scan",
+                "扫描列表1 优先信道扫描",
                 RadioSettingValueBoolean(tmppr))
         scanl.append(rs)
 
@@ -2580,7 +2579,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         if tmpch > 200:
             tmpch = 0
         rs = RadioSetting("scanlist1_priority_ch1",
-                          "Scanlist 1 priority channel 1 (0 - off)",
+                          "扫描列表1 优先信道1 (0 - 关闭)",
                           RadioSettingValueInteger(0, 200, tmpch))
         scanl.append(rs)
 
@@ -2588,14 +2587,14 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         if tmpch > 200:
             tmpch = 0
         rs = RadioSetting("scanlist1_priority_ch2",
-                          "Scanlist 1 priority channel 2 (0 - off)",
+                          "扫描列表1 优先信道2 (0 - 关闭)",
                           RadioSettingValueInteger(0, 200, tmpch))
         scanl.append(rs)
 
         tmppr = bool((_mem.scanlist2_priority_scan & 1) > 0)
         rs = RadioSetting(
                 "scanlist2_priority_scan",
-                "Scanlist 2 priority channel scan",
+                "扫描列表2 优先信道扫描",
                 RadioSettingValueBoolean(tmppr))
         scanl.append(rs)
 
@@ -2603,7 +2602,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         if tmpch > 200:
             tmpch = 0
         rs = RadioSetting("scanlist2_priority_ch1",
-                          "Scanlist 2 priority channel 1 (0 - off)",
+                          "扫描列表2 优先信道1 (0 - 关闭)",
                           RadioSettingValueInteger(0, 200, tmpch))
         scanl.append(rs)
 
@@ -2611,7 +2610,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         if tmpch > 200:
             tmpch = 0
         rs = RadioSetting("scanlist2_priority_ch2",
-                          "Scanlist 2 priority channel 2 (0 - off)",
+                          "扫描列表2 优先信道2 (0 - 关闭)",
                           RadioSettingValueInteger(0, 200, tmpch))
         scanl.append(rs)
 
@@ -2621,7 +2620,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         tmpc = _mem.call_channel+1
         if tmpc > 200:
             tmpc = 1
-        rs = RadioSetting("call_channel", "One key call channel",
+        rs = RadioSetting("call_channel", "一键即呼信道",
                           RadioSettingValueInteger(1, 200, tmpc))
         basic.append(rs)
 
@@ -2629,7 +2628,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         tmpsq = _mem.squelch
         if tmpsq > 9:
             tmpsq = 1
-        rs = RadioSetting("squelch", "Squelch",
+        rs = RadioSetting("squelch", "静噪等级",
                           RadioSettingValueInteger(0, 9, tmpsq))
         basic.append(rs)
 
@@ -2639,21 +2638,21 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmptot = 10
         rs = RadioSetting(
                 "tot",
-                "Max talk time [min]",
+                "发送超时 [分钟]",
                 RadioSettingValueInteger(0, 10, tmptot))
         basic.append(rs)
 
         # NOAA autoscan
         rs = RadioSetting(
                 "noaa_autoscan",
-                "NOAA Autoscan", RadioSettingValueBoolean(
+                "NOAA自动扫描", RadioSettingValueBoolean(
                     bool(_mem.noaa_autoscan > 0)))
         basic.append(rs)
 
         # VOX switch
         rs = RadioSetting(
                 "vox_switch",
-                "VOX enabled", RadioSettingValueBoolean(
+                "声控发射", RadioSettingValueBoolean(
                     bool(_mem.vox_switch > 0)))
         basic.append(rs)
 
@@ -2661,7 +2660,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         tmpvox = _mem.vox_level+1
         if tmpvox > 10:
             tmpvox = 10
-        rs = RadioSetting("vox_level", "VOX Level",
+        rs = RadioSetting("vox_level", "声控发射灵敏度",
                           RadioSettingValueInteger(1, 10, tmpvox))
         basic.append(rs)
 
@@ -2669,7 +2668,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         tmpmicgain = _mem.mic_gain
         if tmpmicgain > 4:
             tmpmicgain = 2
-        rs = RadioSetting("mic_gain", "Mic Gain",
+        rs = RadioSetting("mic_gain", "麦克风增益",
                           RadioSettingValueList(MIC_GAIN_LIST, None, tmpmicgain))
         basic.append(rs)
 
@@ -2679,7 +2678,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmpchdispmode = 0
         rs = RadioSetting(
                 "channel_display_mode",
-                "Channel display mode",
+                "信道显示模式",
                 RadioSettingValueList(
                     CHANNELDISP_LIST,
                     CHANNELDISP_LIST[tmpchdispmode]))
@@ -2691,7 +2690,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmpcross = 0
         rs = RadioSetting(
                 "crossband",
-                "Cross-band receiving/transmitting",
+                "跨段收发",
                 RadioSettingValueList(
                     CROSSBAND_LIST,
                     CROSSBAND_LIST[tmpcross]))
@@ -2703,7 +2702,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmpbatsave = BATSAVE_LIST.index("1:4")
         rs = RadioSetting(
                 "battery_save",
-                "Battery Save",
+                "省电模式",
                 RadioSettingValueList(
                     BATSAVE_LIST,
                     BATSAVE_LIST[tmpbatsave]))
@@ -2713,7 +2712,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         tmpdual = _mem.dual_watch
         if tmpdual >= len(DUALWATCH_LIST):
             tmpdual = 0
-        rs = RadioSetting("dualwatch", "Dual Watch", RadioSettingValueList(
+        rs = RadioSetting("dualwatch", "双频守候", RadioSettingValueList(
             DUALWATCH_LIST, DUALWATCH_LIST[tmpdual]))
         basic.append(rs)
 
@@ -2722,7 +2721,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         if tmpback >= len(BACKLIGHT_LIST):
             tmpback = 0
         rs = RadioSetting("backlight_auto_mode",
-                          "Backlight auto mode",
+                          "自动背光",
                           RadioSettingValueList(
                               BACKLIGHT_LIST,
                               BACKLIGHT_LIST[tmpback]))
@@ -2731,20 +2730,20 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # Tail tone elimination
         rs = RadioSetting(
                 "tail_note_elimination",
-                "Tail tone elimination",
+                "尾音消除",
                 RadioSettingValueBoolean(
                     bool(_mem.tail_note_elimination > 0)))
         basic.append(rs)
 
         # VFO open
-        rs = RadioSetting("vfo_open", "VFO open",
+        rs = RadioSetting("vfo_open", "频率模式",
                           RadioSettingValueBoolean(bool(_mem.vfo_open > 0)))
         basic.append(rs)
 
         # Beep control
         rs = RadioSetting(
                 "beep_control",
-                "Beep control",
+                "按键音",
                 RadioSettingValueBoolean(bool(_mem.beep_control > 0)))
         basic.append(rs)
 
@@ -2754,7 +2753,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmpscanres = 0
         rs = RadioSetting(
                 "scan_resume_mode",
-                "Scan resume mode",
+                "扫描恢复模式",
                 RadioSettingValueList(
                     SCANRESUME_LIST,
                     SCANRESUME_LIST[tmpscanres]))
@@ -2763,14 +2762,14 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # Keypad locked
         rs = RadioSetting(
                 "key_lock",
-                "Keypad lock",
+                "按键锁定",
                 RadioSettingValueBoolean(bool(_mem.key_lock > 0)))
         basic.append(rs)
 
         # Auto keypad lock
         rs = RadioSetting(
                 "auto_keypad_lock",
-                "Auto keypad lock",
+                "按键自动锁定",
                 RadioSettingValueBoolean(bool(_mem.auto_keypad_lock > 0)))
         basic.append(rs)
 
@@ -2780,7 +2779,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmpdispmode = 0
         rs = RadioSetting(
                 "welcome_mode",
-                "Power on display mode",
+                "开机显示",
                 RadioSettingValueList(
                     WELCOME_LIST,
                     WELCOME_LIST[tmpdispmode]))
@@ -2790,7 +2789,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         tmpkeypadtone = _mem.keypad_tone
         if tmpkeypadtone >= len(KEYPADTONE_LIST):
             tmpkeypadtone = 0
-        rs = RadioSetting("keypad_tone", "Keypad tone", RadioSettingValueList(
+        rs = RadioSetting("keypad_tone", "按键语音", RadioSettingValueList(
             KEYPADTONE_LIST, KEYPADTONE_LIST[tmpkeypadtone]))
         basic.append(rs)
 
@@ -2798,7 +2797,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         tmplanguage = _mem.language
         if tmplanguage >= len(LANGUAGE_LIST):
             tmplanguage = 0
-        rs = RadioSetting("language", "Language", RadioSettingValueList(
+        rs = RadioSetting("language", "语言", RadioSettingValueList(
             LANGUAGE_LIST, LANGUAGE_LIST[tmplanguage]))
         basic.append(rs)
 
@@ -2806,7 +2805,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         tmpalarmmode = _mem.alarm_mode
         if tmpalarmmode >= len(ALARMMODE_LIST):
             tmpalarmmode = 0
-        rs = RadioSetting("alarm_mode", "Alarm mode", RadioSettingValueList(
+        rs = RadioSetting("alarm_mode", "紧急报警模式", RadioSettingValueList(
             ALARMMODE_LIST, ALARMMODE_LIST[tmpalarmmode]))
         basic.append(rs)
 
@@ -2816,7 +2815,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmpalarmmode = 0
         rs = RadioSetting(
                 "reminding_of_end_talk",
-                "Reminding of end of talk",
+                "首尾音",
                 RadioSettingValueList(
                     REMENDOFTALK_LIST,
                     REMENDOFTALK_LIST[tmpalarmmode]))
@@ -2828,31 +2827,31 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             tmprte = 0
         rs = RadioSetting(
                 "repeater_tail_elimination",
-                "Repeater tail tone elimination",
+                "过中继尾音消除",
                 RadioSettingValueList(RTE_LIST, RTE_LIST[tmprte]))
         basic.append(rs)
 
         # Logo string 1
         if self.FIRMWARE_VERSION.endswith('K'):
             logo1 = convert_bytes_to_chinese(self._welcome_logo[0])
-            rs = RadioSetting("logo1", _("欢迎字符1 (18字符)"),
+            rs = RadioSetting("logo1", "欢迎字符1 (18字符)",
                               RadioSettingChineseValueString(0, 18, logo1, False, VALID_CHARACTERS))
         else:
             logo1 = str(_mem.logo_line1).strip("\x20\x00\xff") + "\x00"
             logo1 = _getstring(logo1.encode('ascii', errors='ignore'), 0, 12)
-            rs = RadioSetting("logo1", _("欢迎字符1 (12字符)"),
+            rs = RadioSetting("logo1", "欢迎字符1 (12字符)",
                               RadioSettingChineseValueString(0, 12, logo1, False))
         basic.append(rs)
 
         # Logo string 2
         if self.FIRMWARE_VERSION.endswith('K'):
             logo2 = convert_bytes_to_chinese(self._welcome_logo[1])
-            rs = RadioSetting("logo2", _("欢迎字符2 (18字符)"),
+            rs = RadioSetting("logo2", "欢迎字符2 (18字符)",
                               RadioSettingChineseValueString(0, 18, logo2, False, VALID_CHARACTERS))
         else:
             logo2 = str(_mem.logo_line2).strip("\x20\x00\xff") + "\x00"
             logo2 = _getstring(logo2.encode('ascii', errors='ignore'), 0, 12)
-            rs = RadioSetting("logo2", _("欢迎字符2 (12字符)"),
+            rs = RadioSetting("logo2", "欢迎字符2 (12字符)",
                               RadioSettingChineseValueString(0, 12, logo2, False))
         basic.append(rs)
 
@@ -2876,7 +2875,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         if tmpflock >= len(FLOCK_LIST):
             tmpflock = 0
         rs = RadioSetting(
-            "flock", "F-LOCK",
+            "flock", "频段解锁",
             RadioSettingValueList(FLOCK_LIST, FLOCK_LIST[tmpflock]))
         unlock.append(rs)
 
@@ -2887,7 +2886,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # unlock.append(rs)
 
         # Killed
-        rs = RadioSetting("Killed", "KILLED Device was disabled (via DTMF)",
+        rs = RadioSetting("Killed", "遥毙禁用",
                           RadioSettingValueBoolean(
                               bool(_mem.lock_killed > 0)))
         unlock.append(rs)
@@ -2911,7 +2910,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # unlock.append(rs)
 
         # SCREEN
-        rs = RadioSetting("scrambler", "SCREN - scrambler enable",
+        rs = RadioSetting("scrambler", "扰频",
                           RadioSettingValueBoolean(
                               bool(_mem.lock_enscramble > 0)))
         unlock.append(rs)
@@ -2919,26 +2918,23 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # readonly info
         # Firmware
         if self.FIRMWARE_VERSION == "":
-            firmware = "To get the firmware version please download"
-            "the image from the radio first"
+            firmware = "获取固件版本需要先从电台下载数据"
         else:
             firmware = self.FIRMWARE_VERSION
 
-        val = RadioSettingValueString(0, 128, firmware)
+        val = RadioSettingValueString(0, 128, firmware, charset=VALID_CHARACTERS)
         val.set_mutable(False)
-        rs = RadioSetting("fw_ver", "Firmware Version", val)
+        rs = RadioSetting("fw_ver", "固件版本", val)
         roinfo.append(rs)
 
         # No limits version for hacked firmware
         val = RadioSettingValueBoolean(self._expanded_limits)
-        rs = RadioSetting("nolimits", "Limits disabled for modified firmware",
+        rs = RadioSetting("nolimits", "禁用限制(适用于第三方固件)",
                           val)
-        rs.set_warning(_(
-            'This should only be enabled if you are using modified firmware '
-            'that supports wider frequency coverage. Enabling this will cause '
-            'CHIRP not to enforce OEM restrictions and may lead to undefined '
-            'or unregulated behavior. Use at your own risk!'),
-            safe_value=False)
+        rs.set_warning(
+            '只有在使用宽频的第三方固件时，才应启用此功能。启用此选项将 CHIRP 无视 OEM 限制，可能导致未定义或未规范的行为。风险自负！',
+            safe_value=False
+        )
         roinfo.append(rs)
 
         return top
