@@ -400,6 +400,8 @@ DTMF_DECODE_RESPONSE_LIST = ["None", "Ring", "Reply", "Both"]
 #                    "Monitor", "Scan on/off", "VOX on/off",
 #                    "Alarm on/off", "FM radio on/off", "Transmit 1750 Hz"]
 
+MIC_GAIN_LIST = ["+1.1dB", "+4.0dB", "+8.0dB", "+12.0dB", "+15.1dB"]
+
 
 FONT_MAPPING = {
     128: {
@@ -1984,7 +1986,10 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
             # mic gain
             if element.get_name() == "mic_gain":
-                _mem.mic_gain = int(element.value)
+                if str(element.value) in MIC_GAIN_LIST:
+                    _mem.mic_gain = int(MIC_GAIN_LIST.index(str(element.value)))
+                else:
+                    _mem.mic_gain = 2
 
             # Channel display mode
             if element.get_name() == "channel_display_mode":
@@ -2663,9 +2668,9 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # Mic gain
         tmpmicgain = _mem.mic_gain
         if tmpmicgain > 4:
-            tmpmicgain = 4
+            tmpmicgain = 2
         rs = RadioSetting("mic_gain", "Mic Gain",
-                          RadioSettingValueInteger(0, 4, tmpmicgain))
+                          RadioSettingValueList(MIC_GAIN_LIST, None, tmpmicgain))
         basic.append(rs)
 
         # Channel display mode
