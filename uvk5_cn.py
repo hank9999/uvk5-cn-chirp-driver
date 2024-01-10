@@ -277,7 +277,7 @@ CHANNELDISP_LIST = ["频率", "信道号", "名称", "名称+频率"]
 BATSAVE_LIST = ["OFF", "1:1", "1:2", "1:3", "1:4"]
 
 # Backlight auto mode
-BACKLIGHT_LIST = ["Off", "1s", "2s", "3s", "4s", "5s"]
+BACKLIGHT_LIST = ["关闭", "5秒", "10秒", "20秒", "1分钟", "2分钟", "4分钟", "开启"]
 
 # Crossband receiving/transmitting
 CROSSBAND_LIST = ["Off", "Band A", "Band B"]
@@ -318,7 +318,7 @@ DTCS_CODES = [
     731, 732, 734, 743, 754
 ]
 
-FLOCK_LIST = ["Off", "FCC", "CE", "GB", "430", "438"]
+FLOCK_LIST = ["默认+137-174 400-430", "FCC", "CE", "GB", "137-174 400-430", "137-174 400-438", "禁用全部", "解锁全部"]
 
 SCANRESUME_LIST = ["TO: Resume after 5 seconds",
                    "CO: Resume after signal disappears",
