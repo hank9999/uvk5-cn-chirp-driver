@@ -125,10 +125,8 @@ u8 vfo_open;
 
 #seekto 0xe90;
 u8 beep_control;
-u8 key1_shortpress_action;
-u8 key1_longpress_action;
-u8 key2_shortpress_action;
-u8 key2_longpress_action;
+
+#seekto 0xe95;
 u8 scan_resume_mode;
 u8 auto_keypad_lock;
 u8 power_on_dispmode;
@@ -186,15 +184,13 @@ u8 scanlist_unknown_0xff;
 
 
 #seekto 0xf40;
-struct {
-u8 flock;
-u8 tx350;
-u8 killed;
-u8 tx200;
-u8 tx500;
-u8 en350;
-u8 enscramble;
-} lock;
+u8 lock_flock;
+
+#seekto 0xf42;
+u8 lock_killed;
+
+#seekto 0xf46;
+u8 lock_enscramble;
 
 #seekto 0xf50;
 struct {
@@ -400,9 +396,9 @@ DTMF_CHARS_UPDOWN = "0123456789ABCDabcd#* "
 DTMF_CODE_CHARS = "ABCD*# "
 DTMF_DECODE_RESPONSE_LIST = ["None", "Ring", "Reply", "Both"]
 
-KEYACTIONS_LIST = ["None", "Flashlight on/off", "Power select",
-                   "Monitor", "Scan on/off", "VOX on/off",
-                   "Alarm on/off", "FM radio on/off", "Transmit 1750 Hz"]
+# KEYACTIONS_LIST = ["None", "Flashlight on/off", "Power select",
+#                    "Monitor", "Scan on/off", "VOX on/off",
+#                    "Alarm on/off", "FM radio on/off", "Transmit 1750 Hz"]
 
 
 FONT_MAPPING = {
@@ -2084,31 +2080,31 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
             # FLOCK
             if element.get_name() == "flock":
-                _mem.lock.flock = FLOCK_LIST.index(str(element.value))
+                _mem.lock_flock = FLOCK_LIST.index(str(element.value))
 
-            # 350TX
-            if element.get_name() == "tx350":
-                _mem.lock.tx350 = element.value and 1 or 0
-
-            # 200TX
-            if element.get_name() == "tx200":
-                _mem.lock.tx200 = element.value and 1 or 0
-
-            # 500TX
-            if element.get_name() == "tx500":
-                _mem.lock.tx500 = element.value and 1 or 0
-
-            # 350EN
-            if element.get_name() == "en350":
-                _mem.lock.en350 = element.value and 1 or 0
+            # # 350TX
+            # if element.get_name() == "tx350":
+            #     _mem.lock.tx350 = element.value and 1 or 0
+            #
+            # # 200TX
+            # if element.get_name() == "tx200":
+            #     _mem.lock.tx200 = element.value and 1 or 0
+            #
+            # # 500TX
+            # if element.get_name() == "tx500":
+            #     _mem.lock.tx500 = element.value and 1 or 0
+            #
+            # # 350EN
+            # if element.get_name() == "en350":
+            #     _mem.lock.en350 = element.value and 1 or 0
 
             # SCREN
             if element.get_name() == "enscramble":
-                _mem.lock.enscramble = element.value and 1 or 0
+                _mem.lock_enscramble = element.value and 1 or 0
 
             # KILLED
             if element.get_name() == "killed":
-                _mem.lock.killed = element.value and 1 or 0
+                _mem.lock_killed = element.value and 1 or 0
 
             # fm radio
             for i in range(1, 21):
@@ -2257,21 +2253,21 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                 if element.get_name() == "scanlist2_priority_ch2":
                     _mem.scanlist2_priority_ch2 = val
 
-            if element.get_name() == "key1_shortpress_action":
-                _mem.key1_shortpress_action = KEYACTIONS_LIST.index(
-                        str(element.value))
-
-            if element.get_name() == "key1_longpress_action":
-                _mem.key1_longpress_action = KEYACTIONS_LIST.index(
-                        str(element.value))
-
-            if element.get_name() == "key2_shortpress_action":
-                _mem.key2_shortpress_action = KEYACTIONS_LIST.index(
-                        str(element.value))
-
-            if element.get_name() == "key2_longpress_action":
-                _mem.key2_longpress_action = KEYACTIONS_LIST.index(
-                        str(element.value))
+            # if element.get_name() == "key1_shortpress_action":
+            #     _mem.key1_shortpress_action = KEYACTIONS_LIST.index(
+            #             str(element.value))
+            #
+            # if element.get_name() == "key1_longpress_action":
+            #     _mem.key1_longpress_action = KEYACTIONS_LIST.index(
+            #             str(element.value))
+            #
+            # if element.get_name() == "key2_shortpress_action":
+            #     _mem.key2_shortpress_action = KEYACTIONS_LIST.index(
+            #             str(element.value))
+            #
+            # if element.get_name() == "key2_longpress_action":
+            #     _mem.key2_longpress_action = KEYACTIONS_LIST.index(
+            #             str(element.value))
 
             if element.get_name() == "nolimits":
                 LOG.warning("User expanded band limits")
@@ -2280,7 +2276,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
     def get_settings(self):
         _mem = self._memobj
         basic = RadioSettingGroup("basic", "Basic Settings")
-        keya = RadioSettingGroup("keya", "Programmable keys")
+        # keya = RadioSettingGroup("keya", "Programmable keys")
         dtmf = RadioSettingGroup("dtmf", "DTMF Settings")
         dtmfc = RadioSettingGroup("dtmfc", "DTMF Contacts")
         mdcc = RadioSettingGroup("mdcc", "MDC 联系人")
@@ -2290,41 +2286,44 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         roinfo = RadioSettingGroup("roinfo", _("Driver information"))
 
+        # top = RadioSettings(
+        #         basic, keya, dtmf, dtmfc, mdcc, scanl, unlock, fmradio, roinfo)
+
         top = RadioSettings(
-                basic, keya, dtmf, dtmfc, mdcc, scanl, unlock, fmradio, roinfo)
+                basic, dtmf, dtmfc, mdcc, scanl, unlock, fmradio, roinfo)
 
-        # Programmable keys
-        tmpval = int(_mem.key1_shortpress_action)
-        if tmpval >= len(KEYACTIONS_LIST):
-            tmpval = 0
-        rs = RadioSetting("key1_shortpress_action", "Side key 1 short press",
-                          RadioSettingValueList(
-                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
-        keya.append(rs)
-
-        tmpval = int(_mem.key1_longpress_action)
-        if tmpval >= len(KEYACTIONS_LIST):
-            tmpval = 0
-        rs = RadioSetting("key1_longpress_action", "Side key 1 long press",
-                          RadioSettingValueList(
-                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
-        keya.append(rs)
-
-        tmpval = int(_mem.key2_shortpress_action)
-        if tmpval >= len(KEYACTIONS_LIST):
-            tmpval = 0
-        rs = RadioSetting("key2_shortpress_action", "Side key 2 short press",
-                          RadioSettingValueList(
-                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
-        keya.append(rs)
-
-        tmpval = int(_mem.key2_longpress_action)
-        if tmpval >= len(KEYACTIONS_LIST):
-            tmpval = 0
-        rs = RadioSetting("key2_longpress_action", "Side key 2 long press",
-                          RadioSettingValueList(
-                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
-        keya.append(rs)
+        # # Programmable keys
+        # tmpval = int(_mem.key1_shortpress_action)
+        # if tmpval >= len(KEYACTIONS_LIST):
+        #     tmpval = 0
+        # rs = RadioSetting("key1_shortpress_action", "Side key 1 short press",
+        #                   RadioSettingValueList(
+        #                       KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+        # keya.append(rs)
+        #
+        # tmpval = int(_mem.key1_longpress_action)
+        # if tmpval >= len(KEYACTIONS_LIST):
+        #     tmpval = 0
+        # rs = RadioSetting("key1_longpress_action", "Side key 1 long press",
+        #                   RadioSettingValueList(
+        #                       KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+        # keya.append(rs)
+        #
+        # tmpval = int(_mem.key2_shortpress_action)
+        # if tmpval >= len(KEYACTIONS_LIST):
+        #     tmpval = 0
+        # rs = RadioSetting("key2_shortpress_action", "Side key 2 short press",
+        #                   RadioSettingValueList(
+        #                       KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+        # keya.append(rs)
+        #
+        # tmpval = int(_mem.key2_longpress_action)
+        # if tmpval >= len(KEYACTIONS_LIST):
+        #     tmpval = 0
+        # rs = RadioSetting("key2_longpress_action", "Side key 2 long press",
+        #                   RadioSettingValueList(
+        #                       KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+        # keya.append(rs)
 
         # DTMF settings
         tmppr = bool(_mem.dtmf_settings.side_tone > 0)
@@ -2868,7 +2867,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # unlock settings
 
         # F-LOCK
-        tmpflock = _mem.lock.flock
+        tmpflock = _mem.lock_flock
         if tmpflock >= len(FLOCK_LIST):
             tmpflock = 0
         rs = RadioSetting(
@@ -2876,40 +2875,40 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             RadioSettingValueList(FLOCK_LIST, FLOCK_LIST[tmpflock]))
         unlock.append(rs)
 
-        # 350TX
-        rs = RadioSetting("tx350", "350TX - unlock 350-400 MHz TX",
-                          RadioSettingValueBoolean(
-                              bool(_mem.lock.tx350 > 0)))
-        unlock.append(rs)
+        # # 350TX
+        # rs = RadioSetting("tx350", "350TX - unlock 350-400 MHz TX",
+        #                   RadioSettingValueBoolean(
+        #                       bool(_mem.lock.tx350 > 0)))
+        # unlock.append(rs)
 
         # Killed
         rs = RadioSetting("Killed", "KILLED Device was disabled (via DTMF)",
                           RadioSettingValueBoolean(
-                              bool(_mem.lock.killed > 0)))
+                              bool(_mem.lock_killed > 0)))
         unlock.append(rs)
 
-        # 200TX
-        rs = RadioSetting("tx200", "200TX - unlock 174-350 MHz TX",
-                          RadioSettingValueBoolean(
-                              bool(_mem.lock.tx200 > 0)))
-        unlock.append(rs)
-
-        # 500TX
-        rs = RadioSetting("tx500", "500TX - unlock 500-600 MHz TX",
-                          RadioSettingValueBoolean(
-                              bool(_mem.lock.tx500 > 0)))
-        unlock.append(rs)
-
-        # 350EN
-        rs = RadioSetting("en350", "350EN - unlock 350-400 MHz RX",
-                          RadioSettingValueBoolean(
-                              bool(_mem.lock.en350 > 0)))
-        unlock.append(rs)
+        # # 200TX
+        # rs = RadioSetting("tx200", "200TX - unlock 174-350 MHz TX",
+        #                   RadioSettingValueBoolean(
+        #                       bool(_mem.lock.tx200 > 0)))
+        # unlock.append(rs)
+        #
+        # # 500TX
+        # rs = RadioSetting("tx500", "500TX - unlock 500-600 MHz TX",
+        #                   RadioSettingValueBoolean(
+        #                       bool(_mem.lock.tx500 > 0)))
+        # unlock.append(rs)
+        #
+        # # 350EN
+        # rs = RadioSetting("en350", "350EN - unlock 350-400 MHz RX",
+        #                   RadioSettingValueBoolean(
+        #                       bool(_mem.lock.en350 > 0)))
+        # unlock.append(rs)
 
         # SCREEN
         rs = RadioSetting("scrambler", "SCREN - scrambler enable",
                           RadioSettingValueBoolean(
-                              bool(_mem.lock.enscramble > 0)))
+                              bool(_mem.lock_enscramble > 0)))
         unlock.append(rs)
 
         # readonly info
