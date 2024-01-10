@@ -328,6 +328,7 @@ WELCOME_LIST = ["Full Screen", "Welcome Info", "Voltage"]
 KEYPADTONE_LIST = ["Off", "Chinese", "English"]
 LANGUAGE_LIST = ["Chinese", "English"]
 ALARMMODE_LIST = ["SITE", "TONE"]
+WELCOME_LIST = ["关闭", "图片", "信息"]
 REMENDOFTALK_LIST = ["关闭", "ROGER尾音", "MDC尾音", "MDC首音", "MDC首尾音", "MDC首音+ROGER"]
 RTE_LIST = ["Off", "100ms", "200ms", "300ms", "400ms",
             "500ms", "600ms", "700ms", "800ms", "900ms"]
