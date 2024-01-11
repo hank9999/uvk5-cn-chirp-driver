@@ -260,12 +260,12 @@ POWER_MEDIUM = 0b01
 POWER_LOW = 0b00
 
 # dtmf_flags
-PTTID_LIST = ["关闭", "BOT", "EOT", "BOTH"]
+PTTID_LIST = ["不发送", "开始上线码", "结束下线码", "开始+结束"]
 
 # power
-UVK5_POWER_LEVELS = [chirp_common.PowerLevel("Low",  watts=1.50),
-                     chirp_common.PowerLevel("Med",  watts=3.00),
-                     chirp_common.PowerLevel("High", watts=5.00),
+UVK5_POWER_LEVELS = [chirp_common.PowerLevel("低",  watts=1.50),
+                     chirp_common.PowerLevel("中",  watts=3.00),
+                     chirp_common.PowerLevel("高", watts=5.00),
                      ]
 
 # scrambler
@@ -274,7 +274,7 @@ SCRAMBLER_LIST = ["关闭", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 # channel display mode
 CHANNELDISP_LIST = ["频率", "信道号", "名称", "名称+频率"]
 # battery save
-BATSAVE_LIST = ["OFF", "1:1", "1:2", "1:3", "1:4"]
+BATSAVE_LIST = ["关闭", "1:1", "1:2", "1:3", "1:4"]
 
 # Backlight auto mode
 BACKLIGHT_LIST = ["关闭", "5秒", "10秒", "20秒", "1分钟", "2分钟", "4分钟", "开启"]
@@ -325,9 +325,9 @@ SCANRESUME_LIST = ["TO: 收到信号5秒后恢复",
                    "SE: 收到信号后停止扫描"]
 
 WELCOME_LIST = ["关闭", "图片", "信息"]
-KEYPADTONE_LIST = ["Off", "中文", "English"]
+KEYPADTONE_LIST = ["关闭", "中文", "English"]
 LANGUAGE_LIST = ["中文", "English"]
-ALARMMODE_LIST = ["本机", "本机+远程"]
+ALARMMODE_LIST = ["本地", "本地+远端"]
 REMENDOFTALK_LIST = ["关闭", "ROGER尾音", "MDC尾音", "MDC首音", "MDC首尾音", "MDC首音+ROGER"]
 RTE_LIST = ["关闭", "100ms", "200ms", "300ms", "400ms",
             "500ms", "600ms", "700ms", "800ms", "900ms"]
@@ -394,7 +394,7 @@ DTMF_CHARS_ID = "0123456789ABCDabcd"
 DTMF_CHARS_KILL = "0123456789ABCDabcd"
 DTMF_CHARS_UPDOWN = "0123456789ABCDabcd#* "
 DTMF_CODE_CHARS = "ABCD*# "
-DTMF_DECODE_RESPONSE_LIST = ["无", "响铃", "回复", "响铃+回复"]
+DTMF_DECODE_RESPONSE_LIST = ["关闭", "本地响铃", "回复响应", "响铃+回复"]
 
 # KEYACTIONS_LIST = ["None", "Flashlight on/off", "Power select",
 #                    "Monitor", "Scan on/off", "VOX on/off",
@@ -1812,7 +1812,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             mem.power = UVK5_POWER_LEVELS[2]
             mem.extra = RadioSettingGroup("Extra", "extra")
             rs = RadioSetting(
-                "bclo", "BCLO",
+                "bclo", "遇忙禁发",
                 RadioSettingValueBoolean(False))
             mem.extra.append(rs)
             rs = RadioSetting(
@@ -1824,7 +1824,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                 RadioSettingValueList(PTTID_LIST, PTTID_LIST[0]))
             mem.extra.append(rs)
             rs = RadioSetting(
-                "dtmfdecode", "DTMF 解码",
+                "dtmfdecode", "DTMF解码",
                 RadioSettingValueBoolean(False))
             mem.extra.append(rs)
             rs = RadioSetting(
@@ -1929,7 +1929,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         # DTMF DECODE
         is_dtmf = bool(_mem.dtmf_decode > 0)
-        rs = RadioSetting("dtmfdecode", "DTMF 解码",
+        rs = RadioSetting("dtmfdecode", "DTMF解码",
                           RadioSettingValueBoolean(is_dtmf))
         mem.extra.append(rs)
         tmpcomment += "DTMFdecode:"+(is_dtmf and "ON" or "off")+" "
@@ -2433,7 +2433,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         val = RadioSettingValueString(3, 3, tmpval)
         val.set_charset(DTMF_CHARS_ID)
         rs = RadioSetting("dtmf_dtmf_local_code",
-                          "本机号码 (3字符 0-9 ABCD)", val)
+                          "身份码 (3字符 0-9 ABCD)", val)
         dtmf.append(rs)
 
         tmpval = str(_mem.dtmf_settings_numbers.dtmf_up_code).upper().strip(
@@ -2805,7 +2805,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         tmpalarmmode = _mem.alarm_mode
         if tmpalarmmode >= len(ALARMMODE_LIST):
             tmpalarmmode = 0
-        rs = RadioSetting("alarm_mode", "紧急报警模式", RadioSettingValueList(
+        rs = RadioSetting("alarm_mode", "紧急告警模式", RadioSettingValueList(
             ALARMMODE_LIST, ALARMMODE_LIST[tmpalarmmode]))
         basic.append(rs)
 
