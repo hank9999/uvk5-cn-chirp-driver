@@ -125,8 +125,10 @@ u8 vfo_open;
 
 #seekto 0xe90;
 u8 beep_control;
-
-#seekto 0xe95;
+u8 key1_shortpress_action;
+u8 key1_longpress_action;
+u8 key2_shortpress_action;
+u8 key2_longpress_action;
 u8 scan_resume_mode;
 u8 auto_keypad_lock;
 u8 power_on_dispmode;
@@ -396,9 +398,9 @@ DTMF_CHARS_UPDOWN = "0123456789ABCDabcd#* "
 DTMF_CODE_CHARS = "ABCD*# "
 DTMF_DECODE_RESPONSE_LIST = ["关闭", "本地响铃", "回复响应", "响铃+回复"]
 
-# KEYACTIONS_LIST = ["None", "Flashlight on/off", "Power select",
-#                    "Monitor", "Scan on/off", "VOX on/off",
-#                    "Alarm on/off", "FM radio on/off", "Transmit 1750 Hz"]
+KEYACTIONS_LIST = ["无", "手电筒", "功率切换",
+                   "监听", "扫描", "声控发射",
+                   "紧急告警", "收音机", "发送 1750Hz"]
 
 MIC_GAIN_LIST = ["+1.1dB", "+4.0dB", "+8.0dB", "+12.0dB", "+15.1dB"]
 
@@ -2257,21 +2259,21 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                 if element.get_name() == "scanlist2_priority_ch2":
                     _mem.scanlist2_priority_ch2 = val
 
-            # if element.get_name() == "key1_shortpress_action":
-            #     _mem.key1_shortpress_action = KEYACTIONS_LIST.index(
-            #             str(element.value))
-            #
-            # if element.get_name() == "key1_longpress_action":
-            #     _mem.key1_longpress_action = KEYACTIONS_LIST.index(
-            #             str(element.value))
-            #
-            # if element.get_name() == "key2_shortpress_action":
-            #     _mem.key2_shortpress_action = KEYACTIONS_LIST.index(
-            #             str(element.value))
-            #
-            # if element.get_name() == "key2_longpress_action":
-            #     _mem.key2_longpress_action = KEYACTIONS_LIST.index(
-            #             str(element.value))
+            if element.get_name() == "key1_shortpress_action":
+                _mem.key1_shortpress_action = KEYACTIONS_LIST.index(
+                        str(element.value))
+
+            if element.get_name() == "key1_longpress_action":
+                _mem.key1_longpress_action = KEYACTIONS_LIST.index(
+                        str(element.value))
+
+            if element.get_name() == "key2_shortpress_action":
+                _mem.key2_shortpress_action = KEYACTIONS_LIST.index(
+                        str(element.value))
+
+            if element.get_name() == "key2_longpress_action":
+                _mem.key2_longpress_action = KEYACTIONS_LIST.index(
+                        str(element.value))
 
             if element.get_name() == "nolimits":
                 LOG.warning("User expanded band limits")
@@ -2280,7 +2282,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
     def get_settings(self):
         _mem = self._memobj
         basic = RadioSettingGroup("basic", "基本设置")
-        # keya = RadioSettingGroup("keya", "Programmable keys")
+        keya = RadioSettingGroup("keya", "侧键设置")
         dtmf = RadioSettingGroup("dtmf", "DTMF 设置")
         dtmfc = RadioSettingGroup("dtmfc", "DTMF 联系人")
         mdcc = RadioSettingGroup("mdcc", "MDC 联系人")
@@ -2290,44 +2292,41 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         roinfo = RadioSettingGroup("roinfo", "设备信息")
 
-        # top = RadioSettings(
-        #         basic, keya, dtmf, dtmfc, mdcc, scanl, unlock, fmradio, roinfo)
-
         top = RadioSettings(
-                basic, dtmf, dtmfc, mdcc, scanl, unlock, fmradio, roinfo)
+                basic, keya, dtmf, dtmfc, mdcc, scanl, unlock, fmradio, roinfo)
 
-        # # Programmable keys
-        # tmpval = int(_mem.key1_shortpress_action)
-        # if tmpval >= len(KEYACTIONS_LIST):
-        #     tmpval = 0
-        # rs = RadioSetting("key1_shortpress_action", "Side key 1 short press",
-        #                   RadioSettingValueList(
-        #                       KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
-        # keya.append(rs)
-        #
-        # tmpval = int(_mem.key1_longpress_action)
-        # if tmpval >= len(KEYACTIONS_LIST):
-        #     tmpval = 0
-        # rs = RadioSetting("key1_longpress_action", "Side key 1 long press",
-        #                   RadioSettingValueList(
-        #                       KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
-        # keya.append(rs)
-        #
-        # tmpval = int(_mem.key2_shortpress_action)
-        # if tmpval >= len(KEYACTIONS_LIST):
-        #     tmpval = 0
-        # rs = RadioSetting("key2_shortpress_action", "Side key 2 short press",
-        #                   RadioSettingValueList(
-        #                       KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
-        # keya.append(rs)
-        #
-        # tmpval = int(_mem.key2_longpress_action)
-        # if tmpval >= len(KEYACTIONS_LIST):
-        #     tmpval = 0
-        # rs = RadioSetting("key2_longpress_action", "Side key 2 long press",
-        #                   RadioSettingValueList(
-        #                       KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
-        # keya.append(rs)
+        # Programmable keys
+        tmpval = int(_mem.key1_shortpress_action)
+        if tmpval >= len(KEYACTIONS_LIST):
+            tmpval = 0
+        rs = RadioSetting("key1_shortpress_action", "侧键1短按",
+                          RadioSettingValueList(
+                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+        keya.append(rs)
+
+        tmpval = int(_mem.key1_longpress_action)
+        if tmpval >= len(KEYACTIONS_LIST):
+            tmpval = 0
+        rs = RadioSetting("key1_longpress_action", "侧键1长按",
+                          RadioSettingValueList(
+                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+        keya.append(rs)
+
+        tmpval = int(_mem.key2_shortpress_action)
+        if tmpval >= len(KEYACTIONS_LIST):
+            tmpval = 0
+        rs = RadioSetting("key2_shortpress_action", "侧键2短按",
+                          RadioSettingValueList(
+                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+        keya.append(rs)
+
+        tmpval = int(_mem.key2_longpress_action)
+        if tmpval >= len(KEYACTIONS_LIST):
+            tmpval = 0
+        rs = RadioSetting("key2_longpress_action", "侧键2长按",
+                          RadioSettingValueList(
+                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+        keya.append(rs)
 
         # DTMF settings
         tmppr = bool(_mem.dtmf_settings.side_tone > 0)
