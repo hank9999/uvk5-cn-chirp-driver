@@ -403,8 +403,11 @@ DTMF_CHARS_UPDOWN = "0123456789ABCDabcd#* "
 DTMF_CODE_CHARS = "ABCD*# "
 DTMF_DECODE_RESPONSE_LIST = ["关闭", "本地响铃", "回复响应", "响铃+回复"]
 
-KEYACTIONS_LIST = ["无", "手电筒", "切换发射功率", "监听", "扫描", "声控发射", "FM收音机", "锁定按键", "切换AB信道",
-                   "切换信道模式", "切换调制模式", "DTMF解码", "切换宽窄带", "A信道发射", "B信道发射"]
+KEYACTIONS_LONG_LIST = ["无", "手电筒", "切换发射功率", "监听", "扫描", "声控发射", "FM收音机", "锁定按键", "切换AB信道",
+                        "切换信道模式", "切换调制模式", "DTMF解码", "切换宽窄带", "A信道发射", "B信道发射"]
+
+KEYACTIONS_SHORT_LIST = ["无", "手电筒", "切换发射功率", "监听", "扫描", "声控发射", "FM收音机", "锁定按键", "切换AB信道",
+                         "切换信道模式", "切换调制模式", "DTMF解码", "切换宽窄带"]
 
 MIC_GAIN_LIST = ["+1.1dB", "+4.0dB", "+8.0dB", "+12.0dB", "+15.1dB"]
 
@@ -2255,23 +2258,23 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                     _mem.scanlist2_priority_ch2 = val
 
             if element.get_name() == "key1_shortpress_action":
-                _mem.key1_shortpress_action = KEYACTIONS_LIST.index(
+                _mem.key1_shortpress_action = KEYACTIONS_SHORT_LIST.index(
                         str(element.value))
 
             if element.get_name() == "key1_longpress_action":
-                _mem.key1_longpress_action = KEYACTIONS_LIST.index(
+                _mem.key1_longpress_action = KEYACTIONS_LONG_LIST.index(
                         str(element.value))
 
             if element.get_name() == "key2_shortpress_action":
-                _mem.key2_shortpress_action = KEYACTIONS_LIST.index(
+                _mem.key2_shortpress_action = KEYACTIONS_SHORT_LIST.index(
                         str(element.value))
 
             if element.get_name() == "key2_longpress_action":
-                _mem.key2_longpress_action = KEYACTIONS_LIST.index(
+                _mem.key2_longpress_action = KEYACTIONS_LONG_LIST.index(
                         str(element.value))
 
             if element.get_name() == "mkey_longpress_action":
-                _mem.key2_longpress_action = KEYACTIONS_LIST.index(
+                _mem.key2_longpress_action = KEYACTIONS_LONG_LIST.index(
                         str(element.value))
 
             if element.get_name() == "nolimits":
@@ -2296,43 +2299,43 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         # Programmable keys
         tmpval = int(_mem.key1_shortpress_action)
-        if tmpval >= len(KEYACTIONS_LIST):
+        if tmpval >= len(KEYACTIONS_SHORT_LIST):
             tmpval = 0
         rs = RadioSetting("key1_shortpress_action", "侧键1短按",
                           RadioSettingValueList(
-                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+                              KEYACTIONS_SHORT_LIST, KEYACTIONS_SHORT_LIST[tmpval]))
         keya.append(rs)
 
         tmpval = int(_mem.key1_longpress_action)
-        if tmpval >= len(KEYACTIONS_LIST):
+        if tmpval >= len(KEYACTIONS_LONG_LIST):
             tmpval = 0
         rs = RadioSetting("key1_longpress_action", "侧键1长按",
                           RadioSettingValueList(
-                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+                              KEYACTIONS_LONG_LIST, KEYACTIONS_LONG_LIST[tmpval]))
         keya.append(rs)
 
         tmpval = int(_mem.key2_shortpress_action)
-        if tmpval >= len(KEYACTIONS_LIST):
+        if tmpval >= len(KEYACTIONS_SHORT_LIST):
             tmpval = 0
         rs = RadioSetting("key2_shortpress_action", "侧键2短按",
                           RadioSettingValueList(
-                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+                              KEYACTIONS_SHORT_LIST, KEYACTIONS_SHORT_LIST[tmpval]))
         keya.append(rs)
 
         tmpval = int(_mem.key2_longpress_action)
-        if tmpval >= len(KEYACTIONS_LIST):
+        if tmpval >= len(KEYACTIONS_LONG_LIST):
             tmpval = 0
         rs = RadioSetting("key2_longpress_action", "侧键2长按",
                           RadioSettingValueList(
-                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+                              KEYACTIONS_LONG_LIST, KEYACTIONS_LONG_LIST[tmpval]))
         keya.append(rs)
 
         tmpval = int(_mem.mkey_longpress_action)
-        if tmpval >= len(KEYACTIONS_LIST):
+        if tmpval >= len(KEYACTIONS_LONG_LIST):
             tmpval = 0
         rs = RadioSetting("mkey_longpress_action", "M键长按",
                           RadioSettingValueList(
-                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+                              KEYACTIONS_LONG_LIST, KEYACTIONS_LONG_LIST[tmpval]))
         keya.append(rs)
 
         # DTMF settings
