@@ -344,7 +344,7 @@ PROG_SIZE = 0x1e00  # size of the memory that we will write
 MEM_BLOCK = 0x80  # largest block of memory that we can reliably write
 
 # fm radio supported frequencies
-FMMIN = 76.0
+FMMIN = 64.0
 FMMAX = 108.0
 
 # bands supported by the UV-K5
