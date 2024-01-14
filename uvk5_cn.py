@@ -125,10 +125,8 @@ u8 vfo_open;
 
 #seekto 0xe90;
 u8 beep_control;
-u8 key1_shortpress_action;
-u8 key1_longpress_action;
-u8 key2_shortpress_action;
-u8 key2_longpress_action;
+
+#seekto 0xe95;
 u8 scan_resume_mode;
 u8 auto_keypad_lock;
 u8 power_on_dispmode;
@@ -241,6 +239,13 @@ struct {
     char name[14];
 } mdccontact2[6];
 
+#seekto 0x1ff8;
+u8 key1_shortpress_action;
+u8 key1_longpress_action;
+u8 key2_shortpress_action;
+u8 key2_longpress_action;
+u8 mkey_longpress_action;
+
 #seekto 0x1fff;
 u8 mdc_num;
 """
@@ -335,7 +340,7 @@ RTE_LIST = ["关闭", "100ms", "200ms", "300ms", "400ms",
             "500ms", "600ms", "700ms", "800ms", "900ms"]
 
 MEM_SIZE = 0x2000  # size of all memory
-PROG_SIZE = 0x1d00  # size of the memory that we will write
+PROG_SIZE = 0x1e00  # size of the memory that we will write
 MEM_BLOCK = 0x80  # largest block of memory that we can reliably write
 
 # fm radio supported frequencies
@@ -398,9 +403,8 @@ DTMF_CHARS_UPDOWN = "0123456789ABCDabcd#* "
 DTMF_CODE_CHARS = "ABCD*# "
 DTMF_DECODE_RESPONSE_LIST = ["关闭", "本地响铃", "回复响应", "响铃+回复"]
 
-KEYACTIONS_LIST = ["无", "手电筒", "功率切换",
-                   "监听", "扫描", "声控发射",
-                   "紧急告警", "收音机", "发送 1750Hz"]
+KEYACTIONS_LIST = ["无", "手电筒", "切换发射功率", "监听", "扫描", "声控发射", "FM收音机", "锁定按键", "切换AB信道",
+                   "切换信道模式", "切换调制模式", "DTMF解码", "切换宽窄带", "A信道发射", "B信道发射"]
 
 MIC_GAIN_LIST = ["+1.1dB", "+4.0dB", "+8.0dB", "+12.0dB", "+15.1dB"]
 
@@ -1428,7 +1432,8 @@ def do_download(radio):
             addr += MEM_BLOCK
         else:
             raise errors.RadioError("信道未完全下载")
-
+    status.cur = addr
+    radio.status_fn(status)
     return memmap.MemoryMapBytes(eeprom)
 
 
@@ -1471,7 +1476,7 @@ def do_upload(radio):
     serport.timeout = 0.5
     status = chirp_common.Status()
     status.cur = 0
-    status.max = PROG_SIZE
+    status.max = PROG_SIZE + 0x70
     status.msg = "正在向电台上传数据"
     radio.status_fn(status)
 
@@ -1491,6 +1496,14 @@ def do_upload(radio):
             addr += MEM_BLOCK
         else:
             raise errors.RadioError("信道未完全上传")
+    status.cur = addr
+    radio.status_fn(status)
+
+    o = radio.get_mmap()[0x1F90:0x2000]
+    _writemem(serport, o, 0x1F90)
+    status.cur = PROG_SIZE + 0x70
+    radio.status_fn(status)
+
     status.msg = "上传数据完成"
 
     return True
@@ -1501,7 +1514,7 @@ def do_extra_upload(radio):
     serport.timeout = 0.5
     status = chirp_common.Status()
     status.cur = 0
-    status.max = 26
+    status.max = 3
     status.msg = "正在向电台上传扩容部分数据"
     radio.status_fn(status)
 
@@ -1527,24 +1540,6 @@ def do_extra_upload(radio):
     else:
         status.cur += 3
         radio.status_fn(status)
-
-    _memobj = radio.get_memobj()
-    _writemem(serport, _memobj.mdc_num.get_raw(), 0x1FFF)
-    status.cur += 1
-    radio.status_fn(status)
-
-    addr = 0x1D00
-    for i in range(1, 23):
-        mdc_obj = get_mdc_contact_object(_memobj, i)
-        mdc_id = mdc_obj.id
-        mdc_name = mdc_obj.name
-        data = mdc_id.get_raw() + mdc_name.get_raw()
-        _writemem(serport, data, addr)
-        addr += 0x10
-        status.cur += 1
-        radio.status_fn(status)
-        if i == 16:
-            addr = 0x1F90
     status.msg = "扩容部分数据上传完成"
 
     return True
@@ -1912,7 +1907,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         # BCLO
         is_bclo = bool(_mem.bclo > 0)
-        rs = RadioSetting("bclo", "BCLO", RadioSettingValueBoolean(is_bclo))
+        rs = RadioSetting("bclo", "遇忙禁发", RadioSettingValueBoolean(is_bclo))
         mem.extra.append(rs)
         tmpcomment += "BCLO:"+(is_bclo and "ON" or "off")+" "
 
@@ -2275,6 +2270,10 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                 _mem.key2_longpress_action = KEYACTIONS_LIST.index(
                         str(element.value))
 
+            if element.get_name() == "mkey_longpress_action":
+                _mem.key2_longpress_action = KEYACTIONS_LIST.index(
+                        str(element.value))
+
             if element.get_name() == "nolimits":
                 LOG.warning("User expanded band limits")
                 self._expanded_limits = bool(element.value)
@@ -2282,7 +2281,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
     def get_settings(self):
         _mem = self._memobj
         basic = RadioSettingGroup("basic", "基本设置")
-        keya = RadioSettingGroup("keya", "侧键设置")
+        keya = RadioSettingGroup("keya", "自定义按键")
         dtmf = RadioSettingGroup("dtmf", "DTMF 设置")
         dtmfc = RadioSettingGroup("dtmfc", "DTMF 联系人")
         mdcc = RadioSettingGroup("mdcc", "MDC 联系人")
@@ -2324,6 +2323,14 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         if tmpval >= len(KEYACTIONS_LIST):
             tmpval = 0
         rs = RadioSetting("key2_longpress_action", "侧键2长按",
+                          RadioSettingValueList(
+                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+        keya.append(rs)
+
+        tmpval = int(_mem.mkey_longpress_action)
+        if tmpval >= len(KEYACTIONS_LIST):
+            tmpval = 0
+        rs = RadioSetting("mkey_longpress_action", "M键长按",
                           RadioSettingValueList(
                               KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
         keya.append(rs)
@@ -3082,6 +3089,3 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                     _mem4.channel_attributes[number].is_scanlist2 = 0
 
         return mem
-
-    def get_memobj(self):
-        return self._memobj
