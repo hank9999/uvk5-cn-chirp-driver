@@ -1376,8 +1376,9 @@ def _writemem(serport, data, offset):
                   (offset, len(data), util.hexprint(data)))
 
     dlen = len(data)
+    # I do not know why adding 8 works in size.
     writemem = b"\x1d\x05" + \
-        struct.pack("<BBHBB", dlen+8, 0, offset, dlen, 1) + \
+        struct.pack("<BBHBB", dlen+8, 0, offset, dlen+8, 1) + \
         b"\x6a\x39\x57\x64"+data
 
     _send_command(serport, writemem)
