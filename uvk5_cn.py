@@ -1428,7 +1428,8 @@ def do_download(radio):
             addr += MEM_BLOCK
         else:
             raise errors.RadioError("信道未完全下载")
-
+    status.cur = addr
+    radio.status_fn(status)
     return memmap.MemoryMapBytes(eeprom)
 
 
@@ -1491,6 +1492,8 @@ def do_upload(radio):
             addr += MEM_BLOCK
         else:
             raise errors.RadioError("信道未完全上传")
+    status.cur = addr
+    radio.status_fn(status)
     status.msg = "上传数据完成"
 
     return True
