@@ -335,7 +335,7 @@ RTE_LIST = ["关闭", "100ms", "200ms", "300ms", "400ms",
             "500ms", "600ms", "700ms", "800ms", "900ms"]
 
 MEM_SIZE = 0x2000  # size of all memory
-PROG_SIZE = 0x1d00  # size of the memory that we will write
+PROG_SIZE = 0x1e00  # size of the memory that we will write
 MEM_BLOCK = 0x80  # largest block of memory that we can reliably write
 
 # fm radio supported frequencies
@@ -1472,7 +1472,7 @@ def do_upload(radio):
     serport.timeout = 0.5
     status = chirp_common.Status()
     status.cur = 0
-    status.max = PROG_SIZE
+    status.max = PROG_SIZE + 0x70
     status.msg = "正在向电台上传数据"
     radio.status_fn(status)
 
@@ -1494,6 +1494,12 @@ def do_upload(radio):
             raise errors.RadioError("信道未完全上传")
     status.cur = addr
     radio.status_fn(status)
+
+    o = radio.get_mmap()[0x1F90:0x2000]
+    _writemem(serport, o, 0x1F90)
+    status.cur = PROG_SIZE + 0x70
+    radio.status_fn(status)
+
     status.msg = "上传数据完成"
 
     return True
@@ -1504,7 +1510,7 @@ def do_extra_upload(radio):
     serport.timeout = 0.5
     status = chirp_common.Status()
     status.cur = 0
-    status.max = 26
+    status.max = 3
     status.msg = "正在向电台上传扩容部分数据"
     radio.status_fn(status)
 
@@ -1530,24 +1536,6 @@ def do_extra_upload(radio):
     else:
         status.cur += 3
         radio.status_fn(status)
-
-    _memobj = radio.get_memobj()
-    _writemem(serport, _memobj.mdc_num.get_raw(), 0x1FFF)
-    status.cur += 1
-    radio.status_fn(status)
-
-    addr = 0x1D00
-    for i in range(1, 23):
-        mdc_obj = get_mdc_contact_object(_memobj, i)
-        mdc_id = mdc_obj.id
-        mdc_name = mdc_obj.name
-        data = mdc_id.get_raw() + mdc_name.get_raw()
-        _writemem(serport, data, addr)
-        addr += 0x10
-        status.cur += 1
-        radio.status_fn(status)
-        if i == 16:
-            addr = 0x1F90
     status.msg = "扩容部分数据上传完成"
 
     return True
@@ -3085,6 +3073,3 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                     _mem4.channel_attributes[number].is_scanlist2 = 0
 
         return mem
-
-    def get_memobj(self):
-        return self._memobj
