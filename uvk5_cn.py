@@ -125,10 +125,8 @@ u8 vfo_open;
 
 #seekto 0xe90;
 u8 beep_control;
-u8 key1_shortpress_action;
-u8 key1_longpress_action;
-u8 key2_shortpress_action;
-u8 key2_longpress_action;
+
+#seekto 0xe95;
 u8 scan_resume_mode;
 u8 auto_keypad_lock;
 u8 power_on_dispmode;
@@ -240,6 +238,13 @@ struct {
     u8 id[2];
     char name[14];
 } mdccontact2[6];
+
+#seekto 0x1ff8;
+u8 key1_shortpress_action;
+u8 key1_longpress_action;
+u8 key2_shortpress_action;
+u8 key2_longpress_action;
+u8 mkey_longpress_action;
 
 #seekto 0x1fff;
 u8 mdc_num;
@@ -398,9 +403,8 @@ DTMF_CHARS_UPDOWN = "0123456789ABCDabcd#* "
 DTMF_CODE_CHARS = "ABCD*# "
 DTMF_DECODE_RESPONSE_LIST = ["关闭", "本地响铃", "回复响应", "响铃+回复"]
 
-KEYACTIONS_LIST = ["无", "手电筒", "功率切换",
-                   "监听", "扫描", "声控发射",
-                   "紧急告警", "收音机", "发送 1750Hz"]
+KEYACTIONS_LIST = ["无", "手电筒", "切换发射功率", "监听", "扫描", "声控发射", "FM收音机", "锁定按键", "切换AB信道",
+                   "切换信道模式", "切换调制模式", "DTMF解码", "切换宽窄带", "A信道发射", "B信道发射"]
 
 MIC_GAIN_LIST = ["+1.1dB", "+4.0dB", "+8.0dB", "+12.0dB", "+15.1dB"]
 
@@ -2266,6 +2270,10 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                 _mem.key2_longpress_action = KEYACTIONS_LIST.index(
                         str(element.value))
 
+            if element.get_name() == "mkey_longpress_action":
+                _mem.key2_longpress_action = KEYACTIONS_LIST.index(
+                        str(element.value))
+
             if element.get_name() == "nolimits":
                 LOG.warning("User expanded band limits")
                 self._expanded_limits = bool(element.value)
@@ -2273,7 +2281,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
     def get_settings(self):
         _mem = self._memobj
         basic = RadioSettingGroup("basic", "基本设置")
-        keya = RadioSettingGroup("keya", "侧键设置")
+        keya = RadioSettingGroup("keya", "自定义按键")
         dtmf = RadioSettingGroup("dtmf", "DTMF 设置")
         dtmfc = RadioSettingGroup("dtmfc", "DTMF 联系人")
         mdcc = RadioSettingGroup("mdcc", "MDC 联系人")
@@ -2315,6 +2323,14 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         if tmpval >= len(KEYACTIONS_LIST):
             tmpval = 0
         rs = RadioSetting("key2_longpress_action", "侧键2长按",
+                          RadioSettingValueList(
+                              KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
+        keya.append(rs)
+
+        tmpval = int(_mem.mkey_longpress_action)
+        if tmpval >= len(KEYACTIONS_LIST):
+            tmpval = 0
+        rs = RadioSetting("mkey_longpress_action", "M键长按",
                           RadioSettingValueList(
                               KEYACTIONS_LIST, KEYACTIONS_LIST[tmpval]))
         keya.append(rs)
