@@ -1913,7 +1913,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         # BCLO
         is_bclo = bool(_mem.bclo > 0)
-        rs = RadioSetting("bclo", "BCLO", RadioSettingValueBoolean(is_bclo))
+        rs = RadioSetting("bclo", "遇忙禁发", RadioSettingValueBoolean(is_bclo))
         mem.extra.append(rs)
         tmpcomment += "BCLO:"+(is_bclo and "ON" or "off")+" "
 
