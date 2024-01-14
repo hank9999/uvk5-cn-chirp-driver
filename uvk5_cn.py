@@ -240,11 +240,11 @@ struct {
 } mdccontact2[6];
 
 #seekto 0x1ff8;
+u8 mkey_longpress_action;
 u8 key1_shortpress_action;
 u8 key1_longpress_action;
 u8 key2_shortpress_action;
 u8 key2_longpress_action;
-u8 mkey_longpress_action;
 
 #seekto 0x1fff;
 u8 mdc_num;
