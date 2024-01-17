@@ -28,6 +28,7 @@
 
 import struct
 import logging
+from typing import Union, List
 
 from chirp import chirp_common, directory, bitwise, memmap, errors, util
 from chirp.errors import InvalidValueError
@@ -1132,50 +1133,70 @@ REVERSE_FONT_MAPPING = {}
 for first_byte, inner_dict in FONT_MAPPING.items():
     for second_byte, character in inner_dict.items():
         REVERSE_FONT_MAPPING[character] = (first_byte, second_byte)
-CHINESE_CHARSET = "".join(REVERSE_FONT_MAPPING.keys())
+CHINESE_CHARSET = ""
 VALID_CHARACTERS = chirp_common.CHARSET_ASCII + CHINESE_CHARSET
 
 
-def convert_bytes_to_chinese(data: bytes) -> str:
+def convert_bytes_to_chinese(data: bytes, fw_version: str) -> str:
     """Convert bytes to a string of chinese characters"""
-    last_byte = 0x00
-    text = ''
-    for byte in data:
-        if last_byte == 0x00 and byte == 0xFF or byte == 0x00:
-            break
-        if byte >= 0x80 and last_byte == 0x00:
-            last_byte = byte
-            continue
-        if last_byte != 0x00:
-            text += FONT_MAPPING[last_byte][byte]
-            last_byte = 0x00
-            continue
-        text += chr(byte)
-    return text
+    if fw_version.endswith('H'):
+        return data.decode('gb2312')
+    else:
+        last_byte = 0x00
+        text = ''
+        for byte in data:
+            if last_byte == 0x00 and byte == 0xFF or byte == 0x00:
+                break
+            if byte >= 0x80 and last_byte == 0x00:
+                last_byte = byte
+                continue
+            if last_byte != 0x00:
+                text += FONT_MAPPING[last_byte][byte]
+                last_byte = 0x00
+                continue
+            text += chr(byte)
+        return text
 
 
-def convert_chinese_to_ascii_chars(data: str) -> str:
-    text = ''
-    for char in data:
-        if char in chirp_common.CHARSET_ASCII:
-            text += char
-        elif char in CHINESE_CHARSET:
-            reverse_str = REVERSE_FONT_MAPPING[char]
-            text += chr(reverse_str[0])
-            text += chr(reverse_str[1])
-    return text
+def convert_chinese_to_bytes(data: str, fw_version: str) -> bytes:
+    if fw_version.endswith('H'):
+        return data.encode('gb2312')
+    else:
+        text = ''
+        for char in data:
+            if char in chirp_common.CHARSET_ASCII:
+                text += char
+            elif char in CHINESE_CHARSET:
+                reverse_str = REVERSE_FONT_MAPPING[char]
+                text += chr(reverse_str[0])
+                text += chr(reverse_str[1])
+        return text.encode('latin-1')
+
+
+def get_gb2312_chinese_characters() -> List[str]:
+    characters = []
+    for i in range(0xB0, 0xF8):
+        for j in range(0xA1, 0xFF):
+            try:
+                characters.append(bytes([i, j]).decode('gb2312'))
+            except Exception:
+                pass  # 忽略无法解码的字节对
+    return characters
 
 
 class RadioSettingChineseValueString(RadioSettingValueString):
 
     """A string setting"""
 
-    def __init__(self, minlength, maxlength, current,
-                 autopad=True, charset=chirp_common.CHARSET_ASCII):
+    _fw_version: str
+
+    def __init__(self, minlength, maxlength, current, fw_version: str, autopad=True,
+                 charset=chirp_common.CHARSET_ASCII):
+        self._fw_version = fw_version
         RadioSettingValueString.__init__(self, minlength, maxlength, current, autopad, charset)
 
     def set_value(self, value):
-        if len(value) < self._minlength or len(convert_chinese_to_ascii_chars(value)) > self._maxlength:
+        if len(value) < self._minlength or len(convert_chinese_to_bytes(value, self._fw_version)) > self._maxlength:
             raise InvalidValueError("Value must be between %i and %i chars" %
                                     (self._minlength, self._maxlength))
         if self._autopad:
@@ -1441,8 +1462,6 @@ def do_download(radio):
 
 
 def do_extra_download(radio):
-    if not radio.FIRMWARE_VERSION.endswith('K'):
-        return [b'', b'']
     serport = radio.pipe
     serport.timeout = 0.5
     status = chirp_common.Status()
@@ -1457,22 +1476,42 @@ def do_extra_download(radio):
     else:
         raise errors.RadioError('无法检测固件版本')
 
-    welcome_len = _read_extra_mem(serport, 0x01, 0x02, 0xE31E)
-    status.cur = 1
-    radio.status_fn(status)
-    welcome_len1, welcome_len2 = welcome_len
-    if welcome_len1 > 18:
-        welcome_len1 = 18
-    if welcome_len2 > 18:
-        welcome_len2 = 18
-    welcome_text_1 = _read_extra_mem(serport, 0x01, welcome_len1, 0xE320)
-    status.cur = 2
-    radio.status_fn(status)
-    welcome_text_2 = _read_extra_mem(serport, 0x01, welcome_len2, 0xE333)
-    status.cur = 3
-    radio.status_fn(status)
-    return [welcome_text_1, welcome_text_2]
-
+    if radio.FIRMWARE_VERSION.endswith('K'):
+        welcome_len = _read_extra_mem(serport, 0x01, 0x02, 0xE31E)
+        status.cur = 1
+        radio.status_fn(status)
+        welcome_len1, welcome_len2 = welcome_len
+        if welcome_len1 > 18:
+            welcome_len1 = 18
+        if welcome_len2 > 18:
+            welcome_len2 = 18
+        welcome_text_1 = _read_extra_mem(serport, 0x01, welcome_len1, 0xE320)
+        status.cur = 2
+        radio.status_fn(status)
+        welcome_text_2 = _read_extra_mem(serport, 0x01, welcome_len2, 0xE333)
+        status.cur = 3
+        radio.status_fn(status)
+        return [welcome_text_1, welcome_text_2]
+    elif radio.FIRMWARE_VERSION.endswith('H'):
+        welcome_len = _read_extra_mem(serport, 0x02, 0x02, 0x653E)
+        status.cur = 1
+        radio.status_fn(status)
+        welcome_len1, welcome_len2 = welcome_len
+        if welcome_len1 > 18:
+            welcome_len1 = 18
+        if welcome_len2 > 18:
+            welcome_len2 = 18
+        welcome_text_1 = _read_extra_mem(serport, 0x02, welcome_len1, 0x6540)
+        status.cur = 2
+        radio.status_fn(status)
+        welcome_text_2 = _read_extra_mem(serport, 0x02, welcome_len2, 0x6553)
+        status.cur = 3
+        radio.status_fn(status)
+        return [welcome_text_1, welcome_text_2]
+    else:
+        status.cur = 3
+        radio.status_fn(status)
+        return [b'', b'']
 
 def do_upload(radio):
     serport = radio.pipe
@@ -1538,6 +1577,19 @@ def do_extra_upload(radio):
         radio.status_fn(status)
         _write_extra_mem(serport, 0x01, 0xE333, b'\x00' * 18)
         _write_extra_mem(serport, 0x01, 0xE333, welcome_logo[1])
+        status.cur += 1
+        radio.status_fn(status)
+    elif radio.FIRMWARE_VERSION.endswith('H'):
+        welcome_logo = radio.get_welcome_logo()
+        _write_extra_mem(serport, 0x02, 0x653E, bytes([len(x) for x in welcome_logo]))
+        status.cur += 1
+        radio.status_fn(status)
+        _write_extra_mem(serport, 0x02, 0x6540, b'\x00' * 18)
+        _write_extra_mem(serport, 0x02, 0x6540, welcome_logo[0])
+        status.cur += 1
+        radio.status_fn(status)
+        _write_extra_mem(serport, 0x02, 0x6553, b'\x00' * 18)
+        _write_extra_mem(serport, 0x02, 0x6553, welcome_logo[1])
         status.cur += 1
         radio.status_fn(status)
     else:
@@ -1645,7 +1697,14 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
     # Do a download of the radio from the serial port
     def sync_in(self):
+        global CHINESE_CHARSET, VALID_CHARACTERS
         self._mmap = do_download(self)
+        if self.FIRMWARE_VERSION.endswith('H'):
+            CHINESE_CHARSET = "".join(get_gb2312_chinese_characters())
+            VALID_CHARACTERS = chirp_common.CHARSET_ASCII + CHINESE_CHARSET
+        else:
+            CHINESE_CHARSET = "".join(REVERSE_FONT_MAPPING.keys())
+            VALID_CHARACTERS = chirp_common.CHARSET_ASCII + CHINESE_CHARSET
         self._welcome_logo = do_extra_download(self)
         self.process_mmap()
 
@@ -1849,7 +1908,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         else:
             _mem2 = self._memobj.channelname[number]
             raw_bytes = _mem2.get_raw()
-            mem.name = convert_bytes_to_chinese(raw_bytes).rstrip()
+            mem.name = convert_bytes_to_chinese(raw_bytes, self.FIRMWARE_VERSION).rstrip()
 
         # Convert your low-level frequency to Hertz
         mem.freq = int(_mem.freq)*10
@@ -2064,8 +2123,8 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
             # Logo string 1
             if element.get_name() == "logo1":
-                if self.FIRMWARE_VERSION.endswith('K'):
-                    b = convert_chinese_to_ascii_chars(element.value).encode('latin-1')
+                if self.FIRMWARE_VERSION.endswith('K') or self.FIRMWARE_VERSION.endswith('H'):
+                    b = convert_chinese_to_bytes(str(element.value), self.FIRMWARE_VERSION)
                     self._welcome_logo[0] = b[0:18]
                 else:
                     b = str(element.value).rstrip("\x20\xff\x00") + "\x00" * 12
@@ -2073,8 +2132,8 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
             # Logo string 2
             if element.get_name() == "logo2":
-                if self.FIRMWARE_VERSION.endswith('K'):
-                    b = convert_chinese_to_ascii_chars(element.value).encode('latin-1')
+                if self.FIRMWARE_VERSION.endswith('K') or self.FIRMWARE_VERSION.endswith('H'):
+                    b = convert_chinese_to_bytes(str(element.value), self.FIRMWARE_VERSION)
                     self._welcome_logo[1] = b[0:18]
                 else:
                     b = str(element.value).rstrip("\x20\xff\x00") + "\x00" * 12
@@ -2841,27 +2900,29 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         basic.append(rs)
 
         # Logo string 1
-        if self.FIRMWARE_VERSION.endswith('K'):
-            logo1 = convert_bytes_to_chinese(self._welcome_logo[0])
+        if self.FIRMWARE_VERSION.endswith('K') or self.FIRMWARE_VERSION.endswith('H'):
+            logo1 = convert_bytes_to_chinese(self._welcome_logo[0], self.FIRMWARE_VERSION)
             rs = RadioSetting("logo1", "欢迎字符1 (18字符)",
-                              RadioSettingChineseValueString(0, 18, logo1, False, VALID_CHARACTERS))
+                              RadioSettingChineseValueString(0, 18, logo1, self.FIRMWARE_VERSION,
+                                                             False, VALID_CHARACTERS))
         else:
             logo1 = str(_mem.logo_line1).strip("\x20\x00\xff") + "\x00"
             logo1 = _getstring(logo1.encode('ascii', errors='ignore'), 0, 12)
             rs = RadioSetting("logo1", "欢迎字符1 (12字符)",
-                              RadioSettingChineseValueString(0, 12, logo1, False))
+                              RadioSettingValueString(0, 12, logo1, False))
         basic.append(rs)
 
         # Logo string 2
-        if self.FIRMWARE_VERSION.endswith('K'):
-            logo2 = convert_bytes_to_chinese(self._welcome_logo[1])
+        if self.FIRMWARE_VERSION.endswith('K') or self.FIRMWARE_VERSION.endswith('H'):
+            logo2 = convert_bytes_to_chinese(self._welcome_logo[1], self.FIRMWARE_VERSION)
             rs = RadioSetting("logo2", "欢迎字符2 (18字符)",
-                              RadioSettingChineseValueString(0, 18, logo2, False, VALID_CHARACTERS))
+                              RadioSettingChineseValueString(0, 18, logo2, self.FIRMWARE_VERSION,
+                                                             False, VALID_CHARACTERS))
         else:
             logo2 = str(_mem.logo_line2).strip("\x20\x00\xff") + "\x00"
             logo2 = _getstring(logo2.encode('ascii', errors='ignore'), 0, 12)
             rs = RadioSetting("logo2", "欢迎字符2 (12字符)",
-                              RadioSettingChineseValueString(0, 12, logo2, False))
+                              RadioSettingValueString(0, 12, logo2, False))
         basic.append(rs)
 
         # FM radio
@@ -3036,9 +3097,9 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # channels >200 are the 14 VFO chanells and don't have names
         if number < 200:
             _mem2 = self._memobj.channelname[number]
-            text = convert_chinese_to_ascii_chars(mem.name)
+            text = convert_chinese_to_bytes(mem.name, self.FIRMWARE_VERSION)
             if len(text) < 16:
-                text += "\x00" * (16-len(text))
+                text += '\x00' * (16-len(text))
             elif len(text) >= 16:
                 text = text[:16]
             _mem2.name = text  # Store the alpha tag
