@@ -430,12 +430,17 @@ VALID_CHARACTERS = chirp_common.CHARSET_ASCII + CHINESE_CHARSET
 
 def convert_bytes_to_chinese(data: bytes) -> str:
     """Convert bytes to a string of chinese characters"""
-    return data.decode('gb2312', errors='ignore')
+    try:
+        return data.decode('gb2312')
+    except Exception:
+        return ''
 
 
-def convert_chinese_to_bytes(data: str, fw_version: str) -> bytes:
-    return data.encode('gb2312')
 def convert_chinese_to_bytes(data: str) -> bytes:
+    try:
+        return data.encode('gb2312')
+    except Exception:
+        return b''
 
 
 class RadioSettingChineseValueString(RadioSettingValueString):
