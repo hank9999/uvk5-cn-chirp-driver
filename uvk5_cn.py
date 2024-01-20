@@ -1551,7 +1551,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                         str(element.value))
 
             if element.get_name() == "mkey_longpress_action":
-                _mem.key2_longpress_action = KEYACTIONS_LONG_LIST.index(
+                _mem.mkey_longpress_action = KEYACTIONS_LONG_LIST.index(
                         str(element.value))
 
             if element.get_name() == "nolimits":
