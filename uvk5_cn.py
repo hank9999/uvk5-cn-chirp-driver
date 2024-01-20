@@ -428,13 +428,14 @@ CHINESE_CHARSET = "".join(get_gb2312_chinese_characters())
 VALID_CHARACTERS = chirp_common.CHARSET_ASCII + CHINESE_CHARSET
 
 
-def convert_bytes_to_chinese(data: bytes, fw_version: str) -> str:
+def convert_bytes_to_chinese(data: bytes) -> str:
     """Convert bytes to a string of chinese characters"""
-    return data.decode('gb2312')
+    return data.decode('gb2312', errors='ignore')
 
 
 def convert_chinese_to_bytes(data: str, fw_version: str) -> bytes:
     return data.encode('gb2312')
+def convert_chinese_to_bytes(data: str) -> bytes:
 
 
 class RadioSettingChineseValueString(RadioSettingValueString):
@@ -449,7 +450,7 @@ class RadioSettingChineseValueString(RadioSettingValueString):
         RadioSettingValueString.__init__(self, minlength, maxlength, current, autopad, charset)
 
     def set_value(self, value):
-        if len(value) < self._minlength or len(convert_chinese_to_bytes(value, self._fw_version)) > self._maxlength:
+        if len(value) < self._minlength or len(convert_chinese_to_bytes(value)) > self._maxlength:
             raise InvalidValueError("Value must be between %i and %i chars" %
                                     (self._minlength, self._maxlength))
         if self._autopad:
@@ -1126,7 +1127,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         else:
             _mem2 = self._memobj.channelname[number]
             raw_bytes = _mem2.get_raw()
-            mem.name = convert_bytes_to_chinese(raw_bytes, self.FIRMWARE_VERSION).rstrip()
+            mem.name = convert_bytes_to_chinese(raw_bytes).rstrip()
 
         # Convert your low-level frequency to Hertz
         mem.freq = int(_mem.freq)*10
@@ -1342,7 +1343,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             # Logo string 1
             if element.get_name() == "logo1":
                 if self.FIRMWARE_VERSION.endswith('K') or self.FIRMWARE_VERSION.endswith('H'):
-                    b = convert_chinese_to_bytes(str(element.value), self.FIRMWARE_VERSION)
+                    b = convert_chinese_to_bytes(str(element.value))
                     self._welcome_logo[0] = b[0:18]
                 else:
                     b = str(element.value).rstrip("\x20\xff\x00") + "\x00" * 12
@@ -1351,7 +1352,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             # Logo string 2
             if element.get_name() == "logo2":
                 if self.FIRMWARE_VERSION.endswith('K') or self.FIRMWARE_VERSION.endswith('H'):
-                    b = convert_chinese_to_bytes(str(element.value), self.FIRMWARE_VERSION)
+                    b = convert_chinese_to_bytes(str(element.value))
                     self._welcome_logo[1] = b[0:18]
                 else:
                     b = str(element.value).rstrip("\x20\xff\x00") + "\x00" * 12
@@ -2119,7 +2120,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         # Logo string 1
         if self.FIRMWARE_VERSION.endswith('K') or self.FIRMWARE_VERSION.endswith('H'):
-            logo1 = convert_bytes_to_chinese(self._welcome_logo[0], self.FIRMWARE_VERSION)
+            logo1 = convert_bytes_to_chinese(self._welcome_logo[0])
             rs = RadioSetting("logo1", "欢迎字符1 (18字符)",
                               RadioSettingChineseValueString(0, 18, logo1, self.FIRMWARE_VERSION,
                                                              False, VALID_CHARACTERS))
@@ -2132,7 +2133,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
 
         # Logo string 2
         if self.FIRMWARE_VERSION.endswith('K') or self.FIRMWARE_VERSION.endswith('H'):
-            logo2 = convert_bytes_to_chinese(self._welcome_logo[1], self.FIRMWARE_VERSION)
+            logo2 = convert_bytes_to_chinese(self._welcome_logo[1])
             rs = RadioSetting("logo2", "欢迎字符2 (18字符)",
                               RadioSettingChineseValueString(0, 18, logo2, self.FIRMWARE_VERSION,
                                                              False, VALID_CHARACTERS))
@@ -2315,7 +2316,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # channels >200 are the 14 VFO chanells and don't have names
         if number < 200:
             _mem2 = self._memobj.channelname[number]
-            text = convert_chinese_to_bytes(mem.name, self.FIRMWARE_VERSION)
+            text = convert_chinese_to_bytes(mem.name)
             if len(text) < 16:
                 text += '\x00' * (16-len(text))
             elif len(text) >= 16:
