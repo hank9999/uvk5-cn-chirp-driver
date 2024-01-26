@@ -737,7 +737,7 @@ def do_extra_download(radio):
         raise errors.RadioError('无法检测固件版本')
 
     if radio.FIRMWARE_VERSION.endswith('K') or radio.FIRMWARE_VERSION.endswith('H'):
-        welcome_len = _read_extra_mem(serport, 0x01, 0x02, 0x2024)
+        welcome_len = _read_extra_mem(serport, 0x00, 0x02, 0x2024)
         status.cur = 1
         radio.status_fn(status)
         welcome_len1, welcome_len2 = welcome_len
@@ -745,10 +745,10 @@ def do_extra_download(radio):
             welcome_len1 = 18
         if welcome_len2 > 18:
             welcome_len2 = 18
-        welcome_text_1 = _read_extra_mem(serport, 0x01, welcome_len1, 0x2000)
+        welcome_text_1 = _read_extra_mem(serport, 0x00, welcome_len1, 0x2000)
         status.cur = 2
         radio.status_fn(status)
-        welcome_text_2 = _read_extra_mem(serport, 0x01, welcome_len2, 0x2012)
+        welcome_text_2 = _read_extra_mem(serport, 0x00, welcome_len2, 0x2012)
         status.cur = 3
         radio.status_fn(status)
         return [welcome_text_1, welcome_text_2]
@@ -813,15 +813,15 @@ def do_extra_upload(radio):
 
     if radio.FIRMWARE_VERSION.endswith('K') or radio.FIRMWARE_VERSION.endswith('H'):
         welcome_logo = radio.get_welcome_logo()
-        _write_extra_mem(serport, 0x01, 0x2024, bytes([len(x) for x in welcome_logo]))
+        _write_extra_mem(serport, 0x00, 0x2024, bytes([len(x) for x in welcome_logo]))
         status.cur += 1
         radio.status_fn(status)
-        _write_extra_mem(serport, 0x01, 0x2000, b'\x00' * 18)
-        _write_extra_mem(serport, 0x01, 0x2000, welcome_logo[0])
+        _write_extra_mem(serport, 0x00, 0x2000, b'\x00' * 18)
+        _write_extra_mem(serport, 0x00, 0x2000, welcome_logo[0])
         status.cur += 1
         radio.status_fn(status)
-        _write_extra_mem(serport, 0x01, 0x2012, b'\x00' * 18)
-        _write_extra_mem(serport, 0x01, 0x2012, welcome_logo[1])
+        _write_extra_mem(serport, 0x00, 0x2012, b'\x00' * 18)
+        _write_extra_mem(serport, 0x00, 0x2012, welcome_logo[1])
         status.cur += 1
         radio.status_fn(status)
     else:
