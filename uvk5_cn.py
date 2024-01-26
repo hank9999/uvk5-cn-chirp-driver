@@ -2324,7 +2324,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
             _mem2 = self._memobj.channelname[number]
             text = convert_chinese_to_bytes(mem.name)
             if len(text) < 16:
-                text += '\x00' * (16-len(text))
+                text += b'\x00' * (16-len(text))
             elif len(text) >= 16:
                 text = text[:16]
             _mem2.name = text  # Store the alpha tag
