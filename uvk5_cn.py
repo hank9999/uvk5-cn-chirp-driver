@@ -444,6 +444,13 @@ def convert_chinese_to_bytes(data: str) -> bytes:
         return b''
 
 
+def check_text_in_charset(text: str) -> bool:
+    for char in text:
+        if char not in VALID_CHARACTERS:
+            return False
+    return True
+
+
 class RadioSettingChineseValueString(RadioSettingValueString):
 
     """A string setting"""
@@ -2127,6 +2134,8 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # Logo string 1
         if self.FIRMWARE_VERSION.endswith('K') or self.FIRMWARE_VERSION.endswith('H'):
             logo1 = convert_bytes_to_chinese(self._welcome_logo[0])
+            if not check_text_in_charset(logo1):
+                logo1 = '字符错误请重新设置'
             rs = RadioSetting("logo1", "欢迎字符1 (18字符)",
                               RadioSettingChineseValueString(0, 18, logo1, self.FIRMWARE_VERSION,
                                                              False, VALID_CHARACTERS))
@@ -2140,6 +2149,8 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         # Logo string 2
         if self.FIRMWARE_VERSION.endswith('K') or self.FIRMWARE_VERSION.endswith('H'):
             logo2 = convert_bytes_to_chinese(self._welcome_logo[1])
+            if not check_text_in_charset(logo2):
+                logo2 = '字符错误请重新设置'
             rs = RadioSetting("logo2", "欢迎字符2 (18字符)",
                               RadioSettingChineseValueString(0, 18, logo2, self.FIRMWARE_VERSION,
                                                              False, VALID_CHARACTERS))
