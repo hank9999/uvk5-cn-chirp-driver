@@ -864,7 +864,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
     BAUD_RATE = 38400
     NEEDS_COMPAT_SERIAL = False
     FIRMWARE_VERSION = ""
-    _expanded_limits = False
+    _expanded_limits = True
 
     def __init__(self, pipe):
           super().__init__(pipe)
