@@ -28,7 +28,7 @@
 
 import struct
 import logging
-from typing import Union, List
+from typing import List
 
 from chirp import chirp_common, directory, bitwise, memmap, errors, util
 from chirp.errors import InvalidValueError
@@ -426,7 +426,7 @@ def get_gb2312_chinese_characters() -> List[str]:
 
 
 CHINESE_CHARSET = "".join(get_gb2312_chinese_characters())
-VALID_CHARACTERS = chirp_common.CHARSET_ASCII + CHINESE_CHARSET
+VALID_CHARACTERS = chirp_common.CHARSET_ASCII + CHINESE_CHARSET + "\x00"
 
 
 def convert_bytes_to_chinese(data: bytes) -> str:
